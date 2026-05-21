@@ -2,59 +2,18 @@ name: Release
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      release:
-        description: Force a release (bypasses PR label check)
-        type: boolean
-        default: false
+    tags:
+      - 'v*.*.*'
 
 jobs:
-  check-labels:
+  publish:
+    name: Publish to npm
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-      contents: read
-    outputs:
-      labels: ${{ steps.check.outputs.labels }}
-    steps:
-      - name: Check PR Labels
-        id: check
-        uses: photon-hq/buildspace/.github/blocks/check-pr-label@main
-        with:
-          labels: '["release", "prerelease"]'
-
-  release:
-    needs: check-labels
-    if: fromJSON(needs.check-labels.outputs.labels).release || (github.event_name == 'workflow_dispatch' && inputs.release)
-    uses: photon-hq/buildspace/.github/workflows/typescript-service-release.yaml@main
     permissions:
       contents: write
-      pull-requests: read
-      id-token: write
-    with:
-      service-name: n8n-nodes-spectrum
-      build-command: "npm run lint && npm run build"
-      no-npm-publish: true
-      release: true
-    secrets: inherit
-
-  npm-publish:
-    needs: [check-labels, release]
-    if: >-
-      !cancelled() &&
-      !failure() &&
-      (fromJSON(needs.check-labels.outputs.labels).release ||
-      (github.event_name == 'workflow_dispatch' && inputs.release))
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
 
       - uses: actions/setup-node@v4
         with:
@@ -63,9 +22,21 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run lint && npm run build
+      - name: Generate production shrinkwrap
+        run: |
+          node -e "
+            const p = require('./package.json');
+            const s = { name: p.name, version: p.version, lockfileVersion: 3, requires: true,
+              packages: { '': { name: p.name, version: p.version, license: p.license,
+                engines: p.engines, peerDependencies: p.peerDependencies } } };
+            require('fs').writeFileSync('npm-shrinkwrap.json', JSON.stringify(s, null, 2) + '\n');
+          "
 
-      - run: bash scripts/ci-publish.sh
+      - run: npm run release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
