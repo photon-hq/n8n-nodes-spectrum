@@ -2,4 +2,4 @@
 set -euo pipefail
 
 node scripts/generate-shrinkwrap.mjs
-npm run release
+RELEASE_MODE=true npm publish --access public
