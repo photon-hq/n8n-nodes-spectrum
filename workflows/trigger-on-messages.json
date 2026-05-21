@@ -1,0 +1,31 @@
+{
+	"name": "Spectrum - Trigger on Inbound Messages",
+	"nodes": [
+		{
+			"parameters": {
+				"events": ["messages"],
+				"contentTypes": ["*"],
+				"filters": {
+					"ignoreOutbound": true
+				}
+			},
+			"type": "n8n-nodes-spectrum.photonSpectrumTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"id": "spectrum-trigger",
+			"name": "On Spectrum Event",
+			"webhookId": "REPLACE_AFTER_ACTIVATION",
+			"credentials": {
+				"photonSpectrumCloudApi": {
+					"id": "REPLACE_WITH_CREDENTIAL_ID",
+					"name": "Photon Spectrum Cloud API"
+				}
+			}
+		}
+	],
+	"connections": {},
+	"pinData": {},
+	"meta": {
+		"templateCredsSetupCompleted": false
+	}
+}

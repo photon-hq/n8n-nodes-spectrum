@@ -1,0 +1,40 @@
+{
+	"name": "Spectrum - Register Webhook URL",
+	"nodes": [
+		{
+			"parameters": {},
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"id": "manual-trigger",
+			"name": "When clicking 'Execute workflow'"
+		},
+		{
+			"parameters": {
+				"resource": "webhook",
+				"operation": "registerWebhook",
+				"webhookUrl": "https://your-n8n.example.com/webhook/spectrum-custom"
+			},
+			"type": "n8n-nodes-spectrum.photonSpectrum",
+			"typeVersion": 1,
+			"position": [240, 0],
+			"id": "register-webhook",
+			"name": "Register Webhook",
+			"credentials": {
+				"photonSpectrumCloudApi": {
+					"id": "REPLACE_WITH_CREDENTIAL_ID",
+					"name": "Photon Spectrum Cloud API"
+				}
+			}
+		}
+	],
+	"connections": {
+		"When clicking 'Execute workflow'": {
+			"main": [[{ "node": "Register Webhook", "type": "main", "index": 0 }]]
+		}
+	},
+	"pinData": {},
+	"meta": {
+		"templateCredsSetupCompleted": false
+	}
+}
