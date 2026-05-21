@@ -1,0 +1,68 @@
+{
+	"name": "n8n-nodes-spectrum",
+	"version": "1.0.0",
+	"description": "n8n community node for Photon Spectrum — manage platforms, webhooks, and multi-channel messaging via Spectrum Cloud",
+	"license": "MIT",
+	"keywords": [
+		"n8n-community-node-package",
+		"spectrum",
+		"photon",
+		"n8n",
+		"automation",
+		"messaging",
+		"imessage",
+		"whatsapp",
+		"slack",
+		"voice"
+	],
+	"author": {
+		"name": "Photon AI",
+		"email": "vandit@photon.codes",
+		"url": "https://photon.codes"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/photon-hq/n8n-nodes-spectrum.git"
+	},
+	"homepage": "https://github.com/photon-hq/n8n-nodes-spectrum#readme",
+	"bugs": {
+		"url": "https://github.com/photon-hq/n8n-nodes-spectrum/issues"
+	},
+	"engines": {
+		"node": ">=20.15.0"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"scan": "n8n-node build && node scripts/scan-local.mjs",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist",
+		"npm-shrinkwrap.json"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/PhotonSpectrumCloudApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/PhotonSpectrum/PhotonSpectrum.node.js",
+			"dist/nodes/PhotonSpectrumTrigger/PhotonSpectrumTrigger.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "*",
+		"@n8n/scan-community-package": "*",
+		"eslint": "9.32.0",
+		"prettier": "3.6.2",
+		"typescript": "5.9.2"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}
