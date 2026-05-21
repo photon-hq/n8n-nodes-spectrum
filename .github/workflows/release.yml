@@ -11,7 +11,23 @@ on:
         default: false
 
 jobs:
+  check-labels:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      labels: ${{ steps.check.outputs.labels }}
+    steps:
+      - name: Check PR Labels
+        id: check
+        uses: photon-hq/buildspace/.github/blocks/check-pr-label@main
+        with:
+          labels: '["release", "prerelease"]'
+
   release:
+    needs: check-labels
+    if: fromJSON(needs.check-labels.outputs.labels).release || (github.event_name == 'workflow_dispatch' && inputs.release)
     uses: photon-hq/buildspace/.github/workflows/typescript-service-release.yaml@main
     permissions:
       contents: write
@@ -20,6 +36,35 @@ jobs:
     with:
       service-name: n8n-nodes-spectrum
       build-command: "npm run lint && npm run build"
-      publish-command: "bash scripts/ci-publish.sh"
-      release: ${{ github.event_name == 'workflow_dispatch' && inputs.release || false }}
+      no-npm-publish: true
+      release: true
     secrets: inherit
+
+  npm-publish:
+    needs: [check-labels, release]
+    if: >-
+      !cancelled() &&
+      !failure() &&
+      (fromJSON(needs.check-labels.outputs.labels).release ||
+      (github.event_name == 'workflow_dispatch' && inputs.release))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - run: npm run lint && npm run build
+
+      - run: bash scripts/ci-publish.sh --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
