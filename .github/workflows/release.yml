@@ -2,46 +2,24 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Force a release (bypasses PR label check)
+        type: boolean
+        default: false
 
 jobs:
-  publish:
-    name: Publish to npm
-    runs-on: ubuntu-latest
+  release:
+    uses: photon-hq/buildspace/.github/workflows/typescript-service-release.yaml@main
     permissions:
       contents: write
+      pull-requests: read
       id-token: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-
-      - run: npm ci
-
-      - name: Generate production shrinkwrap
-        run: |
-          node -e "
-            const p = require('./package.json');
-            const s = { name: p.name, version: p.version, lockfileVersion: 3, requires: true,
-              packages: { '': { name: p.name, version: p.version, license: p.license,
-                engines: p.engines, peerDependencies: p.peerDependencies } } };
-            require('fs').writeFileSync('npm-shrinkwrap.json', JSON.stringify(s, null, 2) + '\n');
-          "
-
-      - name: Release
-        run: |
-          [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          npm run release
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    with:
+      service-name: n8n-nodes-spectrum
+      build-command: "npm run lint && npm run build"
+      publish-command: "bash scripts/ci-publish.sh"
+      release: ${{ github.event_name == 'workflow_dispatch' && inputs.release || false }}
+    secrets: inherit
