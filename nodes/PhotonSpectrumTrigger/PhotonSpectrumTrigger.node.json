@@ -1,0 +1,22 @@
+{
+	"node": "n8n-nodes-spectrum.photonSpectrumTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication"],
+	"alias": ["Spectrum Trigger", "Photon Trigger", "Spectrum Cloud Trigger", "Spectrum Webhook", "On Message"],
+	"subcategories": {
+		"Communication": ["Messaging"]
+	},
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://docs.photon.codes/webhooks/overview"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/photon-hq/n8n-nodes-spectrum#spectrum-by-photon-trigger"
+			}
+		]
+	}
+}
