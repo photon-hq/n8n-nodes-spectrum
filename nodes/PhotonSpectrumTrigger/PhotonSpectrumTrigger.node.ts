@@ -9,7 +9,11 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
 
-import { verifySpectrumWebhook } from '../shared/verifySignature';
+import {
+	TRIGGER_QUICK_START,
+	TRIGGER_REPLY_HINT,
+	TRIGGER_WEBHOOK_HINT,
+} from '../shared/uxNotices';
 import {
 	buildWebhookOutput,
 	CONTENT_TYPE_OPTIONS,
@@ -18,6 +22,7 @@ import {
 	SPECTRUM_EVENT_OPTIONS,
 	type SpectrumWebhookPayload,
 } from '../shared/webhookPayload';
+import { verifySpectrumWebhook } from '../shared/verifySignature';
 import {
 	deleteSpectrumWebhook,
 	listSpectrumWebhooks,
@@ -71,9 +76,10 @@ export class PhotonSpectrumTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{ ($parameter["events"] || []).join(", ") || "messages" }}',
-		description: 'Triggers on real-time Spectrum Cloud webhook events',
+		description:
+			'Starts your workflow when someone sends a message on Spectrum (iMessage, Slack, WhatsApp, etc.). Activating the workflow registers the webhook automatically.',
 		defaults: {
-			name: 'On Spectrum Event',
+			name: 'On Spectrum Message',
 		},
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
@@ -94,21 +100,39 @@ export class PhotonSpectrumTrigger implements INodeType {
 		],
 		properties: [
 			{
+				displayName: TRIGGER_QUICK_START,
+				name: 'quickStartNotice',
+				type: 'notice',
+				default: '',
+			},
+			{
+				displayName: TRIGGER_REPLY_HINT,
+				name: 'replyNotice',
+				type: 'notice',
+				default: '',
+			},
+			{
+				displayName: TRIGGER_WEBHOOK_HINT,
+				name: 'webhookModeNotice',
+				type: 'notice',
+				default: '',
+			},
+			{
 				displayName: 'Events',
 				name: 'events',
 				type: 'multiOptions',
 				options: SPECTRUM_EVENT_OPTIONS,
 				default: ['messages'],
 				required: true,
-				description: 'Which Spectrum webhook event types should trigger the workflow',
+				description: 'What should start this workflow. Most people only need Messages.',
 			},
 			{
 				displayName: 'Content Types',
 				name: 'contentTypes',
 				type: 'multiOptions',
 				options: CONTENT_TYPE_OPTIONS,
-				default: ['*'],
-				description: 'Filter message events by content type',
+				default: ['text'],
+				description: 'Only run when the message is this type. Start with Text for simple auto-replies.',
 				displayOptions: {
 					show: {
 						events: ['messages', '*'],
@@ -116,13 +140,22 @@ export class PhotonSpectrumTrigger implements INodeType {
 				},
 			},
 			{
-				displayName: 'Signing Secret',
-				name: 'signingSecret',
-				type: 'string',
-				typeOptions: { password: true },
-				default: '',
-				description:
-					'Optional override. Leave blank to use the secret returned when the webhook was registered.',
+				displayName: 'Advanced Options',
+				name: 'advancedOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				options: [
+					{
+						displayName: 'Signing Secret',
+						name: 'signingSecret',
+						type: 'string',
+						typeOptions: { password: true },
+						default: '',
+						description:
+							'Leave blank — saved automatically when you activate the workflow. Only change this if support asks you to.',
+					},
+				],
 			},
 			{
 				displayName: 'Filters',
@@ -136,7 +169,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						name: 'ignoreOutbound',
 						type: 'boolean',
 						default: true,
-						description: 'Whether to skip messages sent by your project',
+						description: 'Whether to skip messages your own automations sent (recommended)',
 					},
 					{
 						displayName: 'Platform',
@@ -144,6 +177,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						type: 'options',
 						options: PLATFORM_FILTER_OPTIONS,
 						default: '',
+						description: 'Only run for messages from this channel (iMessage, Slack, etc.)',
 					},
 					{
 						displayName: 'Sender Address',
@@ -151,7 +185,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						type: 'string',
 						default: '',
 						placeholder: '+15551234567 or alice@example.com',
-						description: 'Only trigger when the sender matches (case-insensitive)',
+						description: 'Only run when this person sent the message (phone number or email)',
 					},
 					{
 						displayName: 'Space ID',
@@ -159,7 +193,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						type: 'string',
 						default: '',
 						placeholder: 'any;-;+15551234567',
-						description: 'Only trigger for messages in this exact space ID',
+						description: 'Advanced — only run in one specific conversation. Leave blank for all.',
 					},
 					{
 						displayName: 'Space Type',
@@ -238,8 +272,9 @@ export class PhotonSpectrumTrigger implements INodeType {
 
 		const staticData = this.getWorkflowStaticData('node') as Record<string, unknown>;
 		const stored = staticData.webhook as StoredWebhook | undefined;
+		const advanced = this.getNodeParameter('advancedOptions', {}) as { signingSecret?: string };
 		const signingSecret =
-			(this.getNodeParameter('signingSecret', '') as string) || stored?.signingSecret || '';
+			(advanced.signingSecret ?? '').trim() || stored?.signingSecret || '';
 
 		if (!signingSecret) {
 			return {

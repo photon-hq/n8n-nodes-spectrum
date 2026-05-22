@@ -9,15 +9,7 @@ import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
 
 import { SUBTITLE_BY_OPERATION } from '../shared/constants';
 import { spectrumProperties } from './descriptions';
-import {
-	getLineOptions,
-	getPlatformOptions,
-	getSlackTeamOptions,
-	getUserOptions,
-	getWebhookOptions,
-	getWhatsappAccountOptions,
-	getWhatsappTemplateOptions,
-} from '../shared/loadOptions';
+import { getUserOptions } from '../shared/loadOptions';
 import { executeOperation } from './operations/executeOperation';
 
 function buildSubtitleExpression(): string {
@@ -36,7 +28,7 @@ export class PhotonSpectrum implements INodeType {
 		version: 1,
 		subtitle: buildSubtitleExpression(),
 		description:
-			'Manage Spectrum Cloud platforms, users, webhooks, and multi-channel messaging configuration',
+			'Manage Spectrum users and check project status from your workflows. Set up channels in the Spectrum dashboard.',
 		defaults: {
 			name: 'Spectrum by Photon',
 		},
@@ -54,13 +46,7 @@ export class PhotonSpectrum implements INodeType {
 
 	methods = {
 		loadOptions: {
-			getLineOptions,
-			getPlatformOptions,
-			getSlackTeamOptions,
 			getUserOptions,
-			getWebhookOptions,
-			getWhatsappAccountOptions,
-			getWhatsappTemplateOptions,
 		},
 	};
 

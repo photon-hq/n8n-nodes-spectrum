@@ -1,5 +1,5 @@
 {
-	"name": "Spectrum - Auto-reply starter",
+	"name": "Spectrum - Add user from message",
 	"nodes": [
 		{
 			"parameters": {
@@ -24,35 +24,23 @@
 		},
 		{
 			"parameters": {
-				"assignments": {
-					"assignments": [
-						{
-							"id": "sender-field",
-							"name": "from",
-							"value": "={{ $json.sender }}",
-							"type": "string"
-						},
-						{
-							"id": "text-field",
-							"name": "message",
-							"value": "={{ $json.text }}",
-							"type": "string"
-						},
-						{
-							"id": "message-id-field",
-							"name": "messageId",
-							"value": "={{ $json.messageId }}",
-							"type": "string"
-						}
-					]
-				},
-				"options": {}
+				"resource": "user",
+				"operation": "createUser",
+				"userType": "shared",
+				"phoneNumber": "={{ $json.sender }}",
+				"userAdditionalFields": {}
 			},
-			"type": "n8n-nodes-base.set",
-			"typeVersion": 3.4,
-			"position": [260, 0],
-			"id": "extract-message",
-			"name": "Extract sender and text"
+			"type": "n8n-nodes-spectrum.photonSpectrum",
+			"typeVersion": 1,
+			"position": [280, 0],
+			"id": "create-user",
+			"name": "Add sender as user",
+			"credentials": {
+				"photonSpectrumCloudApi": {
+					"id": "REPLACE_WITH_CREDENTIAL_ID",
+					"name": "Photon Spectrum Cloud API"
+				}
+			}
 		}
 	],
 	"connections": {
@@ -60,7 +48,7 @@
 			"main": [
 				[
 					{
-						"node": "Extract sender and text",
+						"node": "Add sender as user",
 						"type": "main",
 						"index": 0
 					}
