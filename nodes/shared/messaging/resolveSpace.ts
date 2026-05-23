@@ -1,4 +1,4 @@
-import { assertOptionalFromPhone, assertPhoneRecipients } from './recipients';
+import { assertOptionalPhone, assertPhoneRecipients } from './recipients';
 import type { PlatformRuntime, ResolvedSpace } from './types';
 
 export function splitAddresses(raw: string): string[] {
@@ -11,13 +11,13 @@ export function splitAddresses(raw: string): string[] {
 export async function resolveSpace(
 	platform: PlatformRuntime,
 	recipients: string[],
-	fromPhone?: string,
+	phone?: string,
 	fieldLabel = 'To',
 ): Promise<ResolvedSpace> {
 	assertPhoneRecipients(recipients, fieldLabel);
-	assertOptionalFromPhone(fromPhone);
+	assertOptionalPhone(phone);
 	const users = await Promise.all(recipients.map((recipient) => platform.user(recipient)));
 	const args: unknown[] = [...users];
-	if (fromPhone) args.push({ phone: fromPhone });
+	if (phone) args.push({ phone });
 	return (await platform.space(...args)) as ResolvedSpace;
 }

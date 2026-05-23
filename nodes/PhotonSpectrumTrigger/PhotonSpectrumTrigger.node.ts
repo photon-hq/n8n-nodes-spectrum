@@ -10,12 +10,14 @@ import type {
 import { NodeConnectionTypes } from 'n8n-workflow';
 
 import {
+	TRIGGER_LINE_HINT,
 	TRIGGER_QUICK_START,
 	TRIGGER_REPLY_HINT,
 	TRIGGER_SENDER_NOTE,
 	TRIGGER_WEBHOOK_HINT,
 	TRIGGER_WEBHOOK_SCOPE,
 } from '../shared/uxNotices';
+import { extractSpacePhone } from '../shared/spacePhone';
 import {
 	buildWebhookOutput,
 	isWebhookTextMessage,
@@ -99,6 +101,12 @@ export class PhotonSpectrumTrigger implements INodeType {
 				default: '',
 			},
 			{
+				displayName: TRIGGER_LINE_HINT,
+				name: 'lineNotice',
+				type: 'notice',
+				default: '',
+			},
+			{
 				displayName: TRIGGER_REPLY_HINT,
 				name: 'replyNotice',
 				type: 'notice',
@@ -147,6 +155,15 @@ export class PhotonSpectrumTrigger implements INodeType {
 				placeholder: 'Add Filter',
 				default: {},
 				options: [
+					{
+						displayName: 'Line Phone Number',
+						name: 'phoneNumber',
+						type: 'string',
+						default: '',
+						placeholder: '+15551234567',
+						description:
+							'Only run when this line handled the conversation ($JSON.phone). Leave blank for all lines.',
+					},
 					{
 						displayName: 'Sender Address',
 						name: 'senderAddress',
@@ -296,7 +313,17 @@ export class PhotonSpectrumTrigger implements INodeType {
 			senderAddress?: string;
 			spaceType?: 'any' | 'dm' | 'group';
 			spaceId?: string;
+			phoneNumber?: string;
 		};
+
+		const spacePhone = extractSpacePhone(payload);
+
+		if (filters.phoneNumber) {
+			const filterPhone = filters.phoneNumber.trim();
+			if (!spacePhone || filterPhone !== spacePhone) {
+				return { webhookResponse: 'ok', noWebhookResponse: false };
+			}
+		}
 
 		if (
 			filters.senderAddress &&

@@ -8,7 +8,8 @@ export const EMAIL_OUTBOUND_CONTACT_HTML =
 	'Need Apple ID email outbound? Email <a href="mailto:daniel@photon.codes">daniel@photon.codes</a>.';
 
 /** Expression defaults — match Spectrum Trigger output (see webhookPayload.ts). */
-export const FROM_SENDER = '={{ $json.phoneNumber || $json.phone || $json.sender }}';
+export const FROM_SENDER = '={{ $json.sender }}';
+export const FROM_SPACE_PHONE = '={{ $json.phone }}';
 export const FROM_MESSAGE_ID = '={{ $json.messageId }}';
 export const FROM_TEXT = '={{ $json.text }}';
 
@@ -22,7 +23,10 @@ export const TO_IMESSAGE_REPLY =
 	EMAIL_OUTBOUND_CONTACT_HTML;
 
 export const TRIGGER_QUICK_START =
-	'<b>Quick start:</b> Add credentials → connect <b>Spectrum by Photon</b> to reply → toggle this workflow <b>Active</b>. Inbound text exposes <code>$json.text</code>, <code>$json.sender</code>, and <code>$json.messageId</code>.';
+	'<b>Quick start:</b> Add credentials → connect <b>Spectrum by Photon</b> to reply → toggle this workflow <b>Active</b>. Inbound text exposes <code>$json.text</code>, <code>$json.sender</code>, <code>$json.phone</code> (space line), and <code>$json.messageId</code>.';
+
+export const TRIGGER_LINE_HINT =
+	'<b>Per-phone routing:</b> <code>$json.phone</code> is the line handling the conversation (same as <code>space.phone</code> in spectrum-ts). Wire it into the action node so replies route through the same line.';
 
 export const TRIGGER_REPLY_HINT =
 	'<b>Want to reply?</b> Wire this → <b>Spectrum by Photon</b> → <b>Reply</b>. Outbound requires an E.164 phone number — Apple ID email senders cannot be replied to yet. ' +
@@ -38,6 +42,9 @@ export const TRIGGER_WEBHOOK_HINT =
 
 export const TRIGGER_WEBHOOK_SCOPE =
 	'<b>iMessage text only:</b> this trigger runs on inbound iMessage text. Photos, files, polls, and reactions are not supported until Spectrum adds webhook delivery with downloadable content.';
+
+export const ACTION_LINE_HINT =
+	'<b>Per-phone routing:</b> After a trigger, leave routing on <i>From Inbound Space</i> (uses <code>{{ $json.phone }}</code>). For cold sends on Business dedicated lines, use <i>Select Line</i>. On Free/Pro shared pool, use <i>Auto</i>.';
 
 export const ACTION_QUICK_START =
 	'<b>Quick start:</b> Wire after <b>Spectrum Trigger</b> to auto-reply, or set <b>To</b> manually. Actions: Send, Reply, React, Show Typing, Group.';

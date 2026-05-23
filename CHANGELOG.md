@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Per-phone routing: trigger exposes `$json.phone` (space line); action node maps to `im.space(user, { phone })`
 - Outbound actions: Send, Reply, React, Show Typing, Group (create chat + send album)
 - Send UX: text/file/poll/contact formats; link preview toggle (enableLinkPreview); voice note as file option
 - iMessage-only scope: remove Slack from trigger filters, docs, and non-iMessage webhook delivery

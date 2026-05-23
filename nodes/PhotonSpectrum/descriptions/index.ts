@@ -1,10 +1,12 @@
 import type { INodeProperties } from 'n8n-workflow';
 
 import {
+	ACTION_LINE_HINT,
 	ACTION_QUICK_START,
 	EMAIL_OUTBOUND_CONTACT_PLAIN,
 	FROM_MESSAGE_ID,
 	FROM_SENDER,
+	FROM_SPACE_PHONE,
 	FROM_TEXT,
 	TO_IMESSAGE_REPLY,
 	TO_IMESSAGE_SEND,
@@ -96,6 +98,72 @@ export const spectrumProperties: INodeProperties[] = [
 			},
 		],
 		default: 'send',
+	},
+	{
+		displayName: ACTION_LINE_HINT,
+		name: 'lineRoutingNotice',
+		type: 'notice',
+		default: '',
+	},
+	{
+		displayName: 'Phone Routing',
+		name: 'phoneRouting',
+		type: 'options',
+		noDataExpression: true,
+		options: [
+			{
+				name: 'From Inbound Space',
+				value: 'fromInbound',
+				description: 'Use space.phone from the trigger ($JSON.phone)',
+			},
+			{
+				name: 'Select Line',
+				value: 'selectLine',
+				description: 'Pick a dedicated line from GET /projects/{ID}/lines/ (Business plan)',
+			},
+			{
+				name: 'Auto',
+				value: 'auto',
+				description: 'Omit phone — Spectrum picks (shared pool on Free/Pro, random dedicated line on Business)',
+			},
+			{
+				name: 'Expression',
+				value: 'expression',
+				description: 'Custom E.164 phone for im.space(user, { phone })',
+			},
+		],
+		default: 'fromInbound',
+	},
+	{
+		displayName: 'Phone',
+		name: 'phone',
+		type: 'string',
+		default: FROM_SPACE_PHONE,
+		placeholder: '={{ $json.phone }}',
+		description:
+			'Line phone for per-phone routing. After a trigger, leave as $JSON.phone so replies use the same line.',
+		displayOptions: { show: { phoneRouting: ['fromInbound'] } },
+	},
+	{
+		displayName: 'Line Name or ID',
+		name: 'phoneNumber',
+		type: 'options',
+		typeOptions: {
+			loadOptionsMethod: 'getProjectLines',
+		},
+		default: '',
+		description:
+			'Dedicated line from your project. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+		displayOptions: { show: { phoneRouting: ['selectLine'] } },
+	},
+	{
+		displayName: 'Phone',
+		name: 'phoneExpression',
+		type: 'string',
+		default: '',
+		placeholder: '={{ $json.phone }}',
+		description: 'E.164 phone passed to im.space(user, { phone })',
+		displayOptions: { show: { phoneRouting: ['expression'] } },
 	},
 	{
 		displayName: TO_IMESSAGE_SEND,
@@ -511,12 +579,5 @@ export const spectrumProperties: INodeProperties[] = [
 		],
 		default: 'start',
 		displayOptions: { show: { operation: ['typing'] } },
-	},
-	{
-		displayName: 'Send From Phone',
-		name: 'fromPhone',
-		type: 'string',
-		default: '',
-		description: 'Dedicated iMessage line in E.164 format (e.g. +15551234567) — leave blank for default',
 	},
 ];

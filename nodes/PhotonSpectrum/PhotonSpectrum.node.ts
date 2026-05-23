@@ -1,5 +1,6 @@
 import type {
 	IExecuteFunctions,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
@@ -8,6 +9,8 @@ import type {
 import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
 
 import { SUBTITLE_BY_OPERATION } from '../shared/constants';
+import { getPhotonSpectrumCloudApiCredentials } from '../shared/credentials';
+import { imessageLines, lineOptions, listProjectLines } from '../shared/linesApi';
 import {
 	isDeliverabilityError,
 	throwDeliverabilityError,
@@ -41,6 +44,19 @@ export class PhotonSpectrum implements INodeType {
 			},
 		],
 		properties: spectrumProperties,
+	};
+
+	methods = {
+		loadOptions: {
+			async getProjectLines(this: ILoadOptionsFunctions) {
+				const credentials = await getPhotonSpectrumCloudApiCredentials(this);
+				const lines = imessageLines(await listProjectLines(credentials));
+				if (lines.length === 0) {
+					return [{ name: 'No Lines in Project', value: '' }];
+				}
+				return lineOptions(lines);
+			},
+		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {

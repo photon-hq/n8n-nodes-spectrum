@@ -3,6 +3,7 @@ import { NodeOperationError } from 'n8n-workflow';
 
 import { resolveEffect } from './effects';
 import {
+	assertResolvedSpacePhone,
 	pollOptionsFromString,
 	readMessagingOptions,
 	splitList,
@@ -25,8 +26,8 @@ function textContent(sp: SpectrumModule, message: string, linkPreview: boolean):
 	};
 }
 
-function getFromPhone(options: NodeMessagingOptions): string {
-	return options.fromPhone?.trim() ?? '';
+function getSpacePhone(options: NodeMessagingOptions): string {
+	return options.phone?.trim() ?? '';
 }
 
 export async function executeImessageOperation(
@@ -37,6 +38,7 @@ export async function executeImessageOperation(
 	optionsInput?: NodeMessagingOptions,
 ): Promise<IDataObject> {
 	const options = optionsInput ?? readMessagingOptions(ctx, itemIndex);
+	assertResolvedSpacePhone(ctx, itemIndex, options);
 	const { runtime, sp, imessageModule, effect: effectBuilder } = session;
 
 	if (!imessageModule || !effectBuilder) {
@@ -85,7 +87,7 @@ async function sendMessage(
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
 	const message = ctx.getNodeParameter('text', itemIndex) as string;
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	const linkPreview = options.linkPreview !== false;
 
 	let content: unknown = textContent(sp, message, linkPreview);
@@ -113,7 +115,7 @@ async function sendAttachmentOrVoice(
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
 	const source = options.attachmentSource ?? 'path';
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	const builder = operation === 'sendVoice' ? sp.voice : sp.attachment;
 
 	let content: unknown;
@@ -156,7 +158,7 @@ async function replyToMessage(
 	const recipients = splitAddresses(ctx.getNodeParameter('targetRecipients', itemIndex) as string);
 	const targetId = ctx.getNodeParameter('targetMessageId', itemIndex) as string;
 	const replyText = ctx.getNodeParameter('replyText', itemIndex, '') as string;
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options), 'Conversation With');
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options), 'Conversation With');
 	const target = (await space.getMessage(targetId)) as Parameters<typeof sp.reply>[1];
 	const linkPreview = options.replyLinkPreview !== false;
 
@@ -208,7 +210,7 @@ async function reactToMessage(
 	if (!reaction) {
 		throw new NodeOperationError(ctx.getNode(), 'Reaction is required', { itemIndex });
 	}
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options), 'Conversation With');
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options), 'Conversation With');
 	const target = await space.getMessage(targetId);
 	await target.react(reaction);
 	return { platform: 'imessage', spaceId: space.id, targetId, reaction };
@@ -223,7 +225,7 @@ async function sendTyping(
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
 	const typingAction = ctx.getNodeParameter('typingAction', itemIndex, 'start') as 'start' | 'stop';
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	await space.send(sp.typing(typingAction) as Parameters<typeof space.send>[0]);
 	return {
 		platform: 'imessage',
@@ -247,7 +249,7 @@ async function createGroup(
 			{ itemIndex },
 		);
 	}
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	const welcome = String(ctx.getNodeParameter('groupWelcomeMessage', itemIndex, '')).trim();
 	let messageId: string | undefined;
 	if (welcome) {
@@ -270,7 +272,7 @@ async function sendGroupAlbum(
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	const source = options.groupAttachmentSource ?? 'path';
 	const items: unknown[] = [];
 
@@ -336,7 +338,7 @@ async function sendCustom(
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
 	const payload = options.customPayload ?? {};
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	const result = await space.send(
 		(sp.custom as (raw: unknown) => unknown)(payload) as Parameters<typeof space.send>[0],
 	);
@@ -360,7 +362,7 @@ async function createPoll(
 			{ itemIndex },
 		);
 	}
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	const result = await space.send(
 		(sp.poll as (...args: unknown[]) => unknown)(title, ...pollOptions) as Parameters<
 			typeof space.send
@@ -383,7 +385,7 @@ async function shareContact(
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 
 	let contactContent: unknown;
 	if (options.vcard?.trim()) {

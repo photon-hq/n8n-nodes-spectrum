@@ -48,8 +48,8 @@ export function assertPhoneRecipients(recipients: string[], fieldLabel: string):
 	}
 }
 
-export function assertOptionalFromPhone(fromPhone: string | undefined): void {
-	const trimmed = fromPhone?.trim();
+export function assertOptionalPhone(phone: string | undefined): void {
+	const trimmed = phone?.trim();
 	if (!trimmed) return;
-	assertPhoneRecipient(trimmed, 'Send From Phone');
+	assertPhoneRecipient(trimmed, 'Phone');
 }

@@ -1,15 +1,17 @@
 import type { IDataObject } from 'n8n-workflow';
 
+import { extractSpacePhone } from './spacePhone';
+
 export interface SpectrumWebhookPayload {
 	event?: string;
-	space?: { id?: string; platform?: string };
+	space?: { id?: string; platform?: string; phone?: string };
 	message?: {
 		id?: string;
 		platform?: string;
 		direction?: string;
 		timestamp?: string;
 		sender?: { id?: string; platform?: string };
-		space?: { id?: string; platform?: string };
+		space?: { id?: string; platform?: string; phone?: string };
 		content?: IDataObject;
 	};
 }
@@ -37,6 +39,7 @@ export function buildWebhookOutput(
 	const spaceId = message.space?.id ?? payload.space?.id ?? '';
 	const senderAddress = message.sender?.id ?? '';
 	const platform = normalizePlatform(message.platform ?? payload.space?.platform);
+	const phone = extractSpacePhone(payload);
 
 	return {
 		event: payload.event ?? null,
@@ -47,6 +50,7 @@ export function buildWebhookOutput(
 		direction: message.direction ?? null,
 		spaceId: spaceId || null,
 		spaceType: spaceId.includes(';-;') ? 'dm' : spaceId ? 'group' : null,
+		phone: phone || null,
 		sender: senderAddress || null,
 		senderPlatform: message.sender?.platform ?? null,
 		timestamp: message.timestamp ?? null,

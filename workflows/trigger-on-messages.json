@@ -19,6 +19,8 @@
 		{
 			"parameters": {
 				"operation": "reply",
+				"phoneRouting": "fromInbound",
+				"phone": "={{ $json.phone }}",
 				"targetRecipients": "={{ $json.sender }}",
 				"targetMessageId": "={{ $json.messageId }}",
 				"replyText": "Thanks for your message!"

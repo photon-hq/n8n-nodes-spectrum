@@ -35,11 +35,13 @@ Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) 
 
 Spectrum webhooks deliver **inbound text only** today. Photos, files, polls, and reactions are not usable in n8n until Spectrum adds downloadable webhook payloads.
 
-**Output:** `$json.text`, `$json.sender` (phone or email from iMessage), `$json.messageId`, `$json.platform`, `$json.spaceId`
+**Output:** `$json.text`, `$json.sender`, `$json.phone` (space line — same as `space.phone` in spectrum-ts), `$json.messageId`, `$json.platform`, `$json.spaceId`
+
+**Per-phone routing:** One workflow can handle every dedicated line on Business. Replies should use **Phone Routing → From Inbound Space** (default) so outbound uses `$json.phone`. Cold sends on dedicated lines: **Select Line**. Free/Pro shared pool: **Auto**.
 
 **Outbound:** Spectrum action nodes require **E.164 phone numbers** (`+15551234567`). Apple ID email is not supported for send/reply yet — contact [daniel@photon.codes](mailto:daniel@photon.codes) if you need that.
 
-**Filters:** sender, space ID, DM vs group
+**Filters:** line phoneNumber, sender, space ID, DM vs group
 
 ## Development
 
