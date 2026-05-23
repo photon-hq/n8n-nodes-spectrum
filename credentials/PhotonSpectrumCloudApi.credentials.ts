@@ -1,13 +1,18 @@
 import type {
 	IAuthenticateGeneric,
+	ICredentialDataDecryptedObject,
 	ICredentialTestRequest,
 	ICredentialType,
+	IDataObject,
+	IHttpRequestHelper,
 	INodeProperties,
 } from 'n8n-workflow';
 
-import { CREDENTIAL_QUICK_START } from '../nodes/shared/uxNotices';
+import { CREDENTIAL_QUICK_START, DASHBOARD_URL } from '../nodes/shared/uxNotices';
+import { photonHttpsJson, spectrumBasicAuth } from '../nodes/shared/photonHttp';
 
 const DEFAULT_RUNTIME = 'https://spectrum.photon.codes';
+const CREDENTIAL_TEST_URL = `${DASHBOARD_URL}/api/auth/ok`;
 
 export class PhotonSpectrumCloudApi implements ICredentialType {
 	name = 'photonSpectrumCloudApi';
@@ -41,7 +46,8 @@ export class PhotonSpectrumCloudApi implements ICredentialType {
 			typeOptions: { password: true },
 			default: '',
 			placeholder: 'Paste your secret key here',
-			description: 'Keep this private — it gives access to your Spectrum project',
+			description:
+				'Your Spectrum secret key from the dashboard (Settings). Same value as “Secret Key” in app.photon.codes.',
 			required: true,
 		},
 		{
@@ -52,19 +58,43 @@ export class PhotonSpectrumCloudApi implements ICredentialType {
 		},
 	];
 
+	async preAuthentication(
+		this: IHttpRequestHelper,
+		credentials: ICredentialDataDecryptedObject,
+	): Promise<IDataObject> {
+		const projectId = ((credentials.projectId as string) || '').trim();
+		const projectSecret = ((credentials.projectSecret as string) || '').trim();
+		const apiHost = ((credentials.apiHost as string) || DEFAULT_RUNTIME).replace(/\/+$/, '');
+
+		if (!projectId || !projectSecret) {
+			return credentials;
+		}
+
+		await photonHttpsJson(`${apiHost}/projects/${encodeURIComponent(projectId)}/platforms/`, {
+			method: 'GET',
+			headers: {
+				Authorization: spectrumBasicAuth(projectId, projectSecret),
+				Accept: 'application/json',
+			},
+		});
+
+		return credentials;
+	}
+
 	authenticate: IAuthenticateGeneric = {
 		type: 'generic',
 		properties: {
 			headers: {
 				Authorization:
-					'={{ "Basic " + Buffer.from($credentials.projectId + ":" + $credentials.projectSecret).toString("base64") }}',
+					'={{ "Basic " + Buffer.from($credentials.projectId.trim() + ":" + $credentials.projectSecret.trim()).toString("base64") }}',
 			},
 		},
 	};
 
+	// Dashboard auth endpoint — same Basic credentials, avoids IPv6/runtime quirks in n8n's test HTTP client.
 	test: ICredentialTestRequest = {
 		request: {
-			url: '={{ ($credentials.apiHost || "https://spectrum.photon.codes").replace(/\\/+$/, "") + "/projects/" + encodeURIComponent($credentials.projectId) + "/platforms/" }}',
+			url: CREDENTIAL_TEST_URL,
 			method: 'GET',
 		},
 	};

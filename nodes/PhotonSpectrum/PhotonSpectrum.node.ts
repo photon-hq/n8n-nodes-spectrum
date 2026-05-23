@@ -7,16 +7,16 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
 
-import { SUBTITLE_BY_OPERATION } from '../shared/constants';
+import { SUBTITLE_BY_OPERATION, SUBTITLE_BY_PLATFORM } from '../shared/constants';
+import {
+	isDeliverabilityError,
+	throwDeliverabilityError,
+} from '../shared/messaging/outboundErrors';
 import { spectrumProperties } from './descriptions';
-import { getUserOptions } from '../shared/loadOptions';
 import { executeOperation } from './operations/executeOperation';
 
 function buildSubtitleExpression(): string {
-	const entries = Object.entries(SUBTITLE_BY_OPERATION)
-		.map(([key, label]) => `"${key}":"${label}"`)
-		.join(',');
-	return `={{ {${entries}}[$parameter["operation"]] || $parameter["operation"] }}`;
+	return `={{ (${JSON.stringify(SUBTITLE_BY_PLATFORM)})[$parameter["platform"]] + ": " + (${JSON.stringify(SUBTITLE_BY_OPERATION)})[$parameter["operation"]] }}`;
 }
 
 export class PhotonSpectrum implements INodeType {
@@ -28,7 +28,7 @@ export class PhotonSpectrum implements INodeType {
 		version: 1,
 		subtitle: buildSubtitleExpression(),
 		description:
-			'Manage Spectrum users and check project status from your workflows. Set up channels in the Spectrum dashboard.',
+			'Send and reply on iMessage from your workflows. Set up channels in the Spectrum dashboard.',
 		defaults: {
 			name: 'Spectrum by Photon',
 		},
@@ -42,12 +42,6 @@ export class PhotonSpectrum implements INodeType {
 			},
 		],
 		properties: spectrumProperties,
-	};
-
-	methods = {
-		loadOptions: {
-			getUserOptions,
-		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
@@ -79,6 +73,10 @@ export class PhotonSpectrum implements INodeType {
 						pairedItem: { item: itemIndex },
 					});
 					continue;
+				}
+
+				if (isDeliverabilityError(error)) {
+					throwDeliverabilityError(this, error, itemIndex);
 				}
 
 				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });

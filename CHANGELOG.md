@@ -2,13 +2,12 @@
 
 ## Unreleased
 
-- Simplify Photon Spectrum Cloud API credential to Project ID and API Key only; remove browser sign-in, auto-provisioning, and in-credential platform setup
-- Focus action node on workflow automation (users, read-only platform status, webhook list); remove dashboard-only operations (Slack setup, Voice, WhatsApp templates, billing, lines, tokens)
-- Add in-node onboarding notices, clearer descriptions for non-technical users, and updated getting-started README and example workflows
-- Quick start notices and smart expression defaults (e.g. `$json.sender`) when nodes are wired after the trigger
+- Replace dashboard-only actions (users, platforms, webhooks) with messaging actions for **iMessage** and **WhatsApp Business**
+- Add Send Message, Reply, Send Attachment, React (iMessage), and Send Template (WhatsApp) via spectrum-ts
+- Update trigger/action onboarding copy and auto-reply starter workflow
 
 ## 1.0.0
 
-- Photon Spectrum Cloud action node covering project, billing, platforms, iMessage, lines, users, webhooks, Slack, WhatsApp Business, and Voice
+- Simplify Photon Spectrum Cloud API credential to Project ID and API Key only
+- Focus action node on workflow automation (users, read-only platform status, webhook list)
 - Photon Spectrum Cloud trigger with automatic webhook registration, HMAC verification, and message event filters
-- Photon Spectrum Cloud API credential with browser device sign-in and manual Project ID/Secret fallback

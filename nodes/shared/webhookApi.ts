@@ -21,8 +21,8 @@ export async function registerSpectrumWebhook(
 	ctx: IHookFunctions,
 	webhookUrl: string,
 ): Promise<WebhookRegistration> {
-	const { projectId } = await getPhotonSpectrumCloudApiCredentials(ctx);
-	const cloud = createSpectrumCloudClient(ctx, projectId);
+	const creds = await getPhotonSpectrumCloudApiCredentials(ctx);
+	const cloud = createSpectrumCloudClient(creds);
 	const data = (await cloud.registerWebhook(webhookUrl)) as unknown as WebhookRegistration;
 	if (!data?.id || !data?.signingSecret) {
 		throw new NodeApiError(ctx.getNode(), {
@@ -37,8 +37,8 @@ export async function registerSpectrumWebhook(
 }
 
 export async function listSpectrumWebhooks(ctx: IHookFunctions): Promise<WebhookListEntry[]> {
-	const { projectId } = await getPhotonSpectrumCloudApiCredentials(ctx);
-	const cloud = createSpectrumCloudClient(ctx, projectId);
+	const creds = await getPhotonSpectrumCloudApiCredentials(ctx);
+	const cloud = createSpectrumCloudClient(creds);
 	const rows = await cloud.listWebhooks();
 	return (rows ?? []).map((row) => ({
 		id: String(row.id),
@@ -49,8 +49,8 @@ export async function listSpectrumWebhooks(ctx: IHookFunctions): Promise<Webhook
 }
 
 export async function deleteSpectrumWebhook(ctx: IHookFunctions, webhookId: string): Promise<void> {
-	const { projectId } = await getPhotonSpectrumCloudApiCredentials(ctx);
-	const cloud = createSpectrumCloudClient(ctx, projectId);
+	const creds = await getPhotonSpectrumCloudApiCredentials(ctx);
+	const cloud = createSpectrumCloudClient(creds);
 	try {
 		await cloud.deleteWebhook(webhookId);
 	} catch (err) {

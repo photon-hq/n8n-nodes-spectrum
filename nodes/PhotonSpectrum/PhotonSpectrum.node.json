@@ -3,7 +3,7 @@
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Communication"],
-	"alias": ["Spectrum", "Photon", "Photon Spectrum", "Spectrum Cloud", "iMessage", "WhatsApp", "Slack", "Voice"],
+	"alias": ["Spectrum", "Photon", "Photon Spectrum", "Spectrum Cloud", "iMessage", "Slack"],
 	"subcategories": {
 		"Communication": ["Messaging"]
 	},

@@ -11,7 +11,6 @@
     "automation",
     "messaging",
     "imessage",
-    "whatsapp",
     "slack",
     "voice"
   ],
@@ -32,8 +31,10 @@
     "node": ">=20.15.0"
   },
   "scripts": {
-    "build": "n8n-node build",
-    "dev": "n8n-node dev",
+    "build": "n8n-node build && node scripts/bundle-spectrum.mjs",
+    "dev": "node scripts/dev-with-tunnel.mjs",
+    "dev:local": "NO_TUNNEL=1 node scripts/dev-with-tunnel.mjs",
+    "dev:tunnel": "node scripts/dev-with-tunnel.mjs",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
     "scan": "n8n-node build && node scripts/scan-local.mjs",
@@ -58,8 +59,10 @@
   "devDependencies": {
     "@n8n/node-cli": "*",
     "@n8n/scan-community-package": "*",
+    "esbuild": "^0.28.0",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
+    "spectrum-ts": "^1.9.1",
     "typescript": "5.9.2"
   },
   "peerDependencies": {

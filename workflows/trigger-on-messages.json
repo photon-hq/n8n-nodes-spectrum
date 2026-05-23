@@ -3,10 +3,8 @@
 	"nodes": [
 		{
 			"parameters": {
-				"events": ["messages"],
-				"contentTypes": ["text"],
 				"filters": {
-					"ignoreOutbound": true
+					"platform": "imessage"
 				}
 			},
 			"type": "n8n-nodes-spectrum.photonSpectrumTrigger",
@@ -24,35 +22,23 @@
 		},
 		{
 			"parameters": {
-				"assignments": {
-					"assignments": [
-						{
-							"id": "sender-field",
-							"name": "from",
-							"value": "={{ $json.sender }}",
-							"type": "string"
-						},
-						{
-							"id": "text-field",
-							"name": "message",
-							"value": "={{ $json.text }}",
-							"type": "string"
-						},
-						{
-							"id": "message-id-field",
-							"name": "messageId",
-							"value": "={{ $json.messageId }}",
-							"type": "string"
-						}
-					]
-				},
-				"options": {}
+				"platform": "imessage",
+				"operation": "reply",
+				"targetRecipients": "={{ $json.sender }}",
+				"targetMessageId": "={{ $json.messageId }}",
+				"replyText": "Thanks for your message!"
 			},
-			"type": "n8n-nodes-base.set",
-			"typeVersion": 3.4,
-			"position": [260, 0],
-			"id": "extract-message",
-			"name": "Extract sender and text"
+			"type": "n8n-nodes-spectrum.photonSpectrum",
+			"typeVersion": 1,
+			"position": [280, 0],
+			"id": "spectrum-reply",
+			"name": "Reply on iMessage",
+			"credentials": {
+				"photonSpectrumCloudApi": {
+					"id": "REPLACE_WITH_CREDENTIAL_ID",
+					"name": "Photon Spectrum Cloud API"
+				}
+			}
 		}
 	],
 	"connections": {
@@ -60,7 +46,7 @@
 			"main": [
 				[
 					{
-						"node": "Extract sender and text",
+						"node": "Reply on iMessage",
 						"type": "main",
 						"index": 0
 					}

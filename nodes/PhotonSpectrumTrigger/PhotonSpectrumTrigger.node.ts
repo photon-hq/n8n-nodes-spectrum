@@ -13,13 +13,12 @@ import {
 	TRIGGER_QUICK_START,
 	TRIGGER_REPLY_HINT,
 	TRIGGER_WEBHOOK_HINT,
+	TRIGGER_WEBHOOK_SCOPE,
 } from '../shared/uxNotices';
 import {
 	buildWebhookOutput,
-	CONTENT_TYPE_OPTIONS,
-	matchesContentTypeFilter,
+	isWebhookTextMessage,
 	normalizePlatform,
-	SPECTRUM_EVENT_OPTIONS,
 	type SpectrumWebhookPayload,
 } from '../shared/webhookPayload';
 import { verifySpectrumWebhook } from '../shared/verifySignature';
@@ -29,6 +28,7 @@ import {
 	registerSpectrumWebhook,
 	type WebhookRegistration,
 } from '../shared/webhookApi';
+import { assertPublicWebhookUrl, isLocalWebhookUrl } from '../shared/webhookUrl';
 
 const SPACE_TYPE_OPTIONS = [
 	{ name: 'Any', value: 'any' },
@@ -40,8 +40,6 @@ const PLATFORM_FILTER_OPTIONS = [
 	{ name: 'Any', value: '' },
 	{ name: 'iMessage', value: 'imessage' },
 	{ name: 'Slack', value: 'slack' },
-	{ name: 'Voice', value: 'voice' },
-	{ name: 'WhatsApp Business', value: 'whatsapp_business' },
 ];
 
 interface StoredWebhook {
@@ -75,9 +73,9 @@ export class PhotonSpectrumTrigger implements INodeType {
 		icon: 'file:Dark.svg',
 		group: ['trigger'],
 		version: 1,
-		subtitle: '={{ ($parameter["events"] || []).join(", ") || "messages" }}',
+		subtitle: 'inbound text',
 		description:
-			'Starts your workflow when someone sends a message on Spectrum (iMessage, Slack, WhatsApp, etc.). Activating the workflow registers the webhook automatically.',
+			'Starts your workflow when someone sends a text message on Spectrum (iMessage or Slack). Activating registers the webhook automatically.',
 		defaults: {
 			name: 'On Spectrum Message',
 		},
@@ -118,26 +116,10 @@ export class PhotonSpectrumTrigger implements INodeType {
 				default: '',
 			},
 			{
-				displayName: 'Events',
-				name: 'events',
-				type: 'multiOptions',
-				options: SPECTRUM_EVENT_OPTIONS,
-				default: ['messages'],
-				required: true,
-				description: 'What should start this workflow. Most people only need Messages.',
-			},
-			{
-				displayName: 'Content Types',
-				name: 'contentTypes',
-				type: 'multiOptions',
-				options: CONTENT_TYPE_OPTIONS,
-				default: ['text'],
-				description: 'Only run when the message is this type. Start with Text for simple auto-replies.',
-				displayOptions: {
-					show: {
-						events: ['messages', '*'],
-					},
-				},
+				displayName: TRIGGER_WEBHOOK_SCOPE,
+				name: 'webhookScopeNotice',
+				type: 'notice',
+				default: '',
 			},
 			{
 				displayName: 'Advanced Options',
@@ -164,13 +146,6 @@ export class PhotonSpectrumTrigger implements INodeType {
 				placeholder: 'Add Filter',
 				default: {},
 				options: [
-					{
-						displayName: 'Ignore Outbound Messages',
-						name: 'ignoreOutbound',
-						type: 'boolean',
-						default: true,
-						description: 'Whether to skip messages your own automations sent (recommended)',
-					},
 					{
 						displayName: 'Platform',
 						name: 'platform',
@@ -213,7 +188,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 				const staticData = this.getWorkflowStaticData('node') as Record<string, unknown>;
 				const stored = staticData.webhook as StoredWebhook | undefined;
 				const webhookUrl = this.getNodeWebhookUrl('default');
-				if (!webhookUrl) return false;
+				if (!webhookUrl || isLocalWebhookUrl(webhookUrl)) return false;
 
 				const webhooks = await listSpectrumWebhooks(this);
 				const existing = webhooks.find((row) => row.webhookUrl === webhookUrl);
@@ -225,6 +200,8 @@ export class PhotonSpectrumTrigger implements INodeType {
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				if (!webhookUrl) return false;
+
+				assertPublicWebhookUrl(this.getNode(), webhookUrl);
 
 				const existing = (await listSpectrumWebhooks(this)).find(
 					(row) => row.webhookUrl === webhookUrl,
@@ -302,43 +279,27 @@ export class PhotonSpectrumTrigger implements INodeType {
 			return { webhookResponse: 'missing event field', noWebhookResponse: false };
 		}
 
-		const selectedEvents = this.getNodeParameter('events', []) as string[];
-		if (
-			selectedEvents.length > 0 &&
-			!selectedEvents.includes('*') &&
-			!selectedEvents.includes(payload.event)
-		) {
-			return { webhookResponse: 'ok', noWebhookResponse: false };
-		}
-
 		if (payload.event !== 'messages') {
-			const output: INodeExecutionData = {
-				json: buildWebhookOutput(payload, {
-					eventHeader: eventHeader ?? null,
-					webhookId: webhookIdHeader ?? null,
-				}),
-			};
-			return { workflowData: [[output]] };
+			return { webhookResponse: 'ok', noWebhookResponse: false };
 		}
 
 		const message = payload.message ?? {};
 		const content = (message.content ?? {}) as IDataObject;
 		const rawContentType = String(content.type ?? '');
+
+		if (!isWebhookTextMessage(rawContentType)) {
+			return { webhookResponse: 'ok', noWebhookResponse: false };
+		}
+
 		const senderAddress = message.sender?.id ?? '';
 		const spaceId = message.space?.id ?? payload.space?.id ?? '';
 		const platform = normalizePlatform(message.platform ?? payload.space?.platform);
-
-		const contentTypes = this.getNodeParameter('contentTypes', []) as string[];
-		if (!matchesContentTypeFilter(contentTypes, rawContentType, content)) {
-			return { webhookResponse: 'ok', noWebhookResponse: false };
-		}
 
 		const filters = this.getNodeParameter('filters', {}) as {
 			platform?: string;
 			senderAddress?: string;
 			spaceType?: 'any' | 'dm' | 'group';
 			spaceId?: string;
-			ignoreOutbound?: boolean;
 		};
 
 		if (filters.platform && platform && filters.platform !== platform) {
@@ -365,10 +326,6 @@ export class PhotonSpectrumTrigger implements INodeType {
 			if (filters.spaceType === 'group' && !isGroup) {
 				return { webhookResponse: 'ok', noWebhookResponse: false };
 			}
-		}
-
-		if (filters.ignoreOutbound !== false && message.direction === 'outbound') {
-			return { webhookResponse: 'ok', noWebhookResponse: false };
 		}
 
 		const output: INodeExecutionData = {
