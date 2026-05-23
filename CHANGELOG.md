@@ -2,12 +2,12 @@
 
 ## Unreleased
 
-- Replace dashboard-only actions (users, platforms, webhooks) with messaging actions for **iMessage** and **WhatsApp Business**
-- Add Send Message, Reply, Send Attachment, React (iMessage), and Send Template (WhatsApp) via spectrum-ts
-- Update trigger/action onboarding copy and auto-reply starter workflow
+- Outbound actions: Send, Reply, React, Show Typing, Group (create chat + send album)
+- Send UX: text/file/poll/contact formats; link preview toggle (enableLinkPreview); voice note as file option
+- iMessage-only scope: remove Slack from trigger filters, docs, and non-iMessage webhook delivery
+- Reject Apple ID email for outbound; require E.164 phone numbers with clear errors
 
 ## 1.0.0
 
-- Simplify Photon Spectrum Cloud API credential to Project ID and API Key only
-- Focus action node on workflow automation (users, read-only platform status, webhook list)
-- Photon Spectrum Cloud trigger with automatic webhook registration, HMAC verification, and message event filters
+- Photon Spectrum Cloud trigger with webhook registration and HMAC verification
+- Photon Spectrum Cloud API credential (Project ID + API Key)

@@ -2,13 +2,12 @@ import type { INodeProperties } from 'n8n-workflow';
 
 import {
 	ACTION_QUICK_START,
+	EMAIL_OUTBOUND_CONTACT_PLAIN,
 	FROM_MESSAGE_ID,
 	FROM_SENDER,
 	FROM_TEXT,
 	TO_IMESSAGE_REPLY,
 	TO_IMESSAGE_SEND,
-	TO_SLACK_REPLY,
-	TO_SLACK_SEND,
 } from '../../shared/uxNotices';
 import { BUBBLE_EFFECTS, SCREEN_EFFECTS, TAPBACKS } from '../../shared/messaging/types';
 
@@ -32,41 +31,24 @@ const EFFECT_OPTIONS = [
 	})),
 ];
 
-const CORE_OPERATIONS: INodeProperties['options'] = [
-	{
-		name: 'Send',
-		value: 'send',
-		action: 'Send a message',
-		description: 'Text, attachment, or other content — configure in Options',
-	},
-	{
-		name: 'Reply',
-		value: 'reply',
-		action: 'Reply to a message',
-		description: 'Threaded reply — wire after Spectrum Trigger',
-	},
-	{
-		name: 'React',
-		value: 'react',
-		action: 'React to a message',
-		description: 'Tapback on iMessage',
-	},
-];
-
-const IMESSAGE_SEND_CONTENT_TYPES: INodeProperties['options'] = [
+const SEND_FORMAT_OPTIONS: INodeProperties['options'] = [
 	{ name: 'Text', value: 'text' },
-	{ name: 'Attachment', value: 'attachment' },
-	{ name: 'Voice Note', value: 'voice' },
-	{ name: 'Rich Link', value: 'richLink' },
+	{ name: 'File', value: 'file' },
 	{ name: 'Poll', value: 'poll' },
 	{ name: 'Contact Card', value: 'contact' },
-	{ name: 'Album', value: 'group' },
-	{ name: 'Custom JSON', value: 'custom' },
 ];
 
-const SLACK_SEND_CONTENT_TYPES: INodeProperties['options'] = [
-	{ name: 'Text', value: 'text' },
-	{ name: 'Attachment', value: 'attachment' },
+const GROUP_OPERATION_OPTIONS: INodeProperties['options'] = [
+	{
+		name: 'Create Group Chat',
+		value: 'create',
+		description: 'Start a new iMessage group with two or more people',
+	},
+	{
+		name: 'Send Album',
+		value: 'sendAlbum',
+		description: 'Send multiple files as one visual group (e.g. photo album)',
+	},
 ];
 
 export const spectrumProperties: INodeProperties[] = [
@@ -77,32 +59,42 @@ export const spectrumProperties: INodeProperties[] = [
 		default: '',
 	},
 	{
-		displayName: 'Platform',
-		name: 'platform',
+		displayName: 'Action',
+		name: 'operation',
 		type: 'options',
 		noDataExpression: true,
 		options: [
-			{ name: 'iMessage', value: 'imessage' },
-			{ name: 'Slack', value: 'slack' },
+			{
+				name: 'Group',
+				value: 'group',
+				action: 'Create or message a group',
+				description: 'Create a group chat or send a file album',
+			},
+			{
+				name: 'React',
+				value: 'react',
+				action: 'React to a message',
+				description: 'IMessage tapback',
+			},
+			{
+				name: 'Reply',
+				value: 'reply',
+				action: 'Reply to a message',
+				description: 'Threaded reply — wire after Spectrum Trigger',
+			},
+			{
+				name: 'Send',
+				value: 'send',
+				action: 'Send a message',
+				description: 'Text, file, poll, or contact card',
+			},
+			{
+				name: 'Show Typing',
+				value: 'typing',
+				action: 'Show or hide typing indicator',
+				description: 'Show “typing…” before a slow reply',
+			},
 		],
-		default: 'imessage',
-	},
-	{
-		displayName: 'Action',
-		name: 'operation',
-		type: 'options',
-		noDataExpression: true,
-		displayOptions: { show: { platform: ['imessage'] } },
-		options: CORE_OPERATIONS,
-		default: 'send',
-	},
-	{
-		displayName: 'Action',
-		name: 'operation',
-		type: 'options',
-		noDataExpression: true,
-		displayOptions: { show: { platform: ['slack'] } },
-		options: CORE_OPERATIONS.filter((op) => 'value' in op && op.value !== 'react'),
 		default: 'send',
 	},
 	{
@@ -110,39 +102,23 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'toImessageSendNotice',
 		type: 'notice',
 		default: '',
-		displayOptions: { show: { platform: ['imessage'], operation: ['send'] } },
-	},
-	{
-		displayName: TO_SLACK_SEND,
-		name: 'toSlackSendNotice',
-		type: 'notice',
-		default: '',
-		displayOptions: { show: { platform: ['slack'], operation: ['send'] } },
+		displayOptions: { show: { operation: ['send', 'typing', 'group'] } },
 	},
 	{
 		displayName: TO_IMESSAGE_REPLY,
 		name: 'toImessageReplyNotice',
 		type: 'notice',
 		default: '',
-		displayOptions: { show: { platform: ['imessage'], operation: ['reply', 'react'] } },
+		displayOptions: { show: { operation: ['reply', 'react'] } },
 	},
 	{
-		displayName: TO_SLACK_REPLY,
-		name: 'toSlackReplyNotice',
-		type: 'notice',
-		default: '',
-		displayOptions: { show: { platform: ['slack'], operation: ['reply'] } },
-	},
-	{
-		displayName: 'To',
-		name: 'recipients',
-		type: 'string',
-		required: true,
-		default: FROM_SENDER,
-		placeholder: '={{ $json.sender }}',
-		description:
-			'Phone (+15551234567) or email (alice@icloud.com). Comma-separate to message multiple people.',
-		displayOptions: { show: { platform: ['imessage'], operation: ['send'] } },
+		displayName: 'Group Operation',
+		name: 'groupOperation',
+		type: 'options',
+		noDataExpression: true,
+		options: GROUP_OPERATION_OPTIONS,
+		default: 'create',
+		displayOptions: { show: { operation: ['group'] } },
 	},
 	{
 		displayName: 'To',
@@ -152,8 +128,21 @@ export const spectrumProperties: INodeProperties[] = [
 		default: FROM_SENDER,
 		placeholder: '={{ $json.sender }}',
 		description:
-			'Slack user ID (U012AB3CD), channel ID (C012AB3CD), or channel name (#general). Comma-separate for multiple.',
-		displayOptions: { show: { platform: ['slack'], operation: ['send'] } },
+			`E.164 phone number only (e.g. +15551234567). Apple ID email is not supported for outbound yet. ${EMAIL_OUTBOUND_CONTACT_PLAIN}`,
+		displayOptions: {
+			show: {
+				operation: ['send', 'typing', 'group'],
+			},
+		},
+	},
+	{
+		displayName: 'Message Format',
+		name: 'sendFormat',
+		type: 'options',
+		noDataExpression: true,
+		options: SEND_FORMAT_OPTIONS,
+		default: 'text',
+		displayOptions: { show: { operation: ['send'] } },
 	},
 	{
 		displayName: 'Message',
@@ -162,7 +151,284 @@ export const spectrumProperties: INodeProperties[] = [
 		typeOptions: { rows: 4 },
 		default: '',
 		placeholder: 'Hello!',
-		displayOptions: { show: { operation: ['send'] } },
+		description: 'Plain text. URLs can show an iMessage link preview when Link Preview is on.',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['text'],
+			},
+		},
+	},
+	{
+		displayName: 'Link Preview',
+		name: 'linkPreview',
+		type: 'boolean',
+		default: true,
+		description:
+			'Whether iMessage should show a link preview for URLs in the message (enableLinkPreview)',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['text'],
+			},
+		},
+	},
+	{
+		displayName: 'Effect',
+		name: 'effect',
+		type: 'options',
+		options: EFFECT_OPTIONS,
+		default: 'none',
+		description: 'Bubble or screen effect (text sends only)',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['text'],
+			},
+		},
+	},
+	{
+		displayName: 'Source',
+		name: 'attachmentSource',
+		type: 'options',
+		options: [
+			{ name: 'File Path', value: 'path' },
+			{ name: 'Binary Property', value: 'binary' },
+		],
+		default: 'path',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['file'],
+			},
+		},
+	},
+	{
+		displayName: 'File Path',
+		name: 'filePath',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['file'],
+				attachmentSource: ['path'],
+			},
+		},
+	},
+	{
+		displayName: 'Binary Property',
+		name: 'binaryProperty',
+		type: 'string',
+		default: 'data',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['file'],
+				attachmentSource: ['binary'],
+			},
+		},
+	},
+	{
+		displayName: 'File Name',
+		name: 'fileName',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['file'],
+			},
+		},
+	},
+	{
+		displayName: 'MIME Type',
+		name: 'mimeType',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['file'],
+			},
+		},
+	},
+	{
+		displayName: 'Send as Voice Note',
+		name: 'asVoiceNote',
+		type: 'boolean',
+		default: false,
+		description:
+			'Whether to deliver audio as an iMessage voice memo (waveform) instead of a file',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['file'],
+			},
+		},
+	},
+	{
+		displayName: 'Voice Duration (Seconds)',
+		name: 'duration',
+		type: 'number',
+		default: 0,
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['file'],
+				asVoiceNote: [true],
+			},
+		},
+	},
+	{
+		displayName: 'Poll Title',
+		name: 'pollTitle',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['poll'],
+			},
+		},
+	},
+	{
+		displayName: 'Poll Options',
+		name: 'pollOptions',
+		type: 'string',
+		default: '',
+		placeholder: 'Option 1, Option 2, Option 3',
+		description: 'Comma-separated (minimum 2). Poll replies are not in the trigger yet.',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['poll'],
+			},
+		},
+	},
+	{
+		displayName: 'Contact First Name',
+		name: 'contactFirst',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['contact'],
+			},
+		},
+	},
+	{
+		displayName: 'Contact Last Name',
+		name: 'contactLast',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['contact'],
+			},
+		},
+	},
+	{
+		displayName: 'Contact Phones',
+		name: 'contactPhones',
+		type: 'string',
+		default: '',
+		placeholder: '+15551234567',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['contact'],
+			},
+		},
+	},
+	{
+		displayName: 'Contact vCard',
+		name: 'vcard',
+		type: 'string',
+		typeOptions: { rows: 4 },
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['send'],
+				sendFormat: ['contact'],
+			},
+		},
+	},
+	{
+		displayName: 'Welcome Message',
+		name: 'groupWelcomeMessage',
+		type: 'string',
+		typeOptions: { rows: 3 },
+		default: '',
+		placeholder: 'Welcome to the group!',
+		description: 'Optional first message after the group is created',
+		displayOptions: {
+			show: {
+				operation: ['group'],
+				groupOperation: ['create'],
+			},
+		},
+	},
+	{
+		displayName: 'Source',
+		name: 'groupAttachmentSource',
+		type: 'options',
+		options: [
+			{ name: 'File Paths', value: 'path' },
+			{ name: 'Binary Properties', value: 'binary' },
+		],
+		default: 'path',
+		displayOptions: {
+			show: {
+				operation: ['group'],
+				groupOperation: ['sendAlbum'],
+			},
+		},
+	},
+	{
+		displayName: 'File Paths',
+		name: 'groupFilePaths',
+		type: 'string',
+		default: '',
+		placeholder: '/path/a.jpg, /path/b.jpg',
+		description: 'Comma-separated paths (minimum 2 files)',
+		displayOptions: {
+			show: {
+				operation: ['group'],
+				groupOperation: ['sendAlbum'],
+				groupAttachmentSource: ['path'],
+			},
+		},
+	},
+	{
+		displayName: 'Binary Properties',
+		name: 'groupBinaryProperties',
+		type: 'string',
+		default: '',
+		placeholder: 'data, data2',
+		description: 'Comma-separated n8n binary property names (minimum 2 files)',
+		displayOptions: {
+			show: {
+				operation: ['group'],
+				groupOperation: ['sendAlbum'],
+				groupAttachmentSource: ['binary'],
+			},
+		},
+	},
+	{
+		displayName: 'Album Caption',
+		name: 'groupCaption',
+		type: 'string',
+		default: '',
+		description: 'Optional text sent with the album (one caption per group)',
+		displayOptions: {
+			show: {
+				operation: ['group'],
+				groupOperation: ['sendAlbum'],
+			},
+		},
 	},
 	{
 		displayName: 'Conversation With',
@@ -171,18 +437,9 @@ export const spectrumProperties: INodeProperties[] = [
 		required: true,
 		default: FROM_SENDER,
 		placeholder: '={{ $json.sender }}',
-		description: 'Phone or email of whoever sent the inbound iMessage',
-		displayOptions: { show: { platform: ['imessage'], operation: ['reply', 'react'] } },
-	},
-	{
-		displayName: 'Conversation With',
-		name: 'targetRecipients',
-		type: 'string',
-		required: true,
-		default: FROM_SENDER,
-		placeholder: '={{ $json.sender }}',
-		description: 'Slack user ID of whoever sent the inbound message (e.g. U012AB3CD)',
-		displayOptions: { show: { platform: ['slack'], operation: ['reply'] } },
+		description:
+			`E.164 phone only (e.g. +15551234567). Must match whoever sent the inbound iMessage — email Apple IDs are not supported for outbound. ${EMAIL_OUTBOUND_CONTACT_PLAIN}`,
+		displayOptions: { show: { operation: ['reply', 'react'] } },
 	},
 	{
 		displayName: 'Message ID',
@@ -191,8 +448,7 @@ export const spectrumProperties: INodeProperties[] = [
 		required: true,
 		default: FROM_MESSAGE_ID,
 		placeholder: '={{ $json.messageId }}',
-		description:
-			'The inbound message to reply to or react to — copy from Spectrum Trigger output',
+		description: 'From Spectrum Trigger output — the message to reply to or react to',
 		displayOptions: { show: { operation: ['reply', 'react'] } },
 	},
 	{
@@ -204,12 +460,34 @@ export const spectrumProperties: INodeProperties[] = [
 		displayOptions: { show: { operation: ['reply'] } },
 	},
 	{
+		displayName: 'Link Preview',
+		name: 'replyLinkPreview',
+		type: 'boolean',
+		default: true,
+		description: 'Whether iMessage should show a link preview for URLs in the reply text',
+		displayOptions: { show: { operation: ['reply'] } },
+	},
+	{
+		displayName: 'Reply Attachment Path',
+		name: 'replyAttachmentPath',
+		type: 'string',
+		default: '',
+		displayOptions: { show: { operation: ['reply'] } },
+	},
+	{
+		displayName: 'Reply Attachment Binary',
+		name: 'replyAttachmentBinary',
+		type: 'string',
+		default: '',
+		displayOptions: { show: { operation: ['reply'] } },
+	},
+	{
 		displayName: 'Reaction',
 		name: 'reaction',
 		type: 'options',
 		options: REACTION_OPTIONS,
 		default: 'love',
-		displayOptions: { show: { platform: ['imessage'], operation: ['react'] } },
+		displayOptions: { show: { operation: ['react'] } },
 	},
 	{
 		displayName: 'Custom Reaction',
@@ -218,177 +496,27 @@ export const spectrumProperties: INodeProperties[] = [
 		default: '',
 		displayOptions: {
 			show: {
-				platform: ['imessage'],
 				operation: ['react'],
 				reaction: ['__custom__'],
 			},
 		},
 	},
 	{
-		displayName: 'Options',
-		name: 'options',
-		type: 'collection',
-		placeholder: 'Add Option',
-		default: { sendContentType: 'text' },
+		displayName: 'Typing Indicator',
+		name: 'typingAction',
+		type: 'options',
 		options: [
-			{
-				displayName: 'Binary Property',
-				name: 'binaryProperty',
-				type: 'string',
-				default: 'data',
-			},
-			{
-				displayName: 'Contact First Name',
-				name: 'contactFirst',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'Contact Last Name',
-				name: 'contactLast',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'Contact Phones',
-				name: 'contactPhones',
-				type: 'string',
-				default: '',
-				placeholder: '+15551234567',
-			},
-			{
-				displayName: 'Contact vCard',
-				name: 'vcard',
-				type: 'string',
-				typeOptions: { rows: 4 },
-				default: '',
-			},
-			{
-				displayName: 'Content Type',
-				name: 'sendContentType',
-				type: 'options',
-				displayOptions: { show: { '/operation': ['send'] } },
-				options: IMESSAGE_SEND_CONTENT_TYPES,
-				default: 'text',
-				description: 'What to send on iMessage',
-			},
-			{
-				displayName: 'Content Type',
-				name: 'sendContentType',
-				type: 'options',
-				displayOptions: { show: { '/operation': ['send'], '/platform': ['slack'] } },
-				options: SLACK_SEND_CONTENT_TYPES,
-				default: 'text',
-				description: 'What to send on Slack',
-			},
-			{
-				displayName: 'Custom Payload (JSON)',
-				name: 'customPayload',
-				type: 'json',
-				default: '{}',
-			},
-			{
-				displayName: 'Edit Text',
-				name: 'editText',
-				type: 'string',
-				typeOptions: { rows: 3 },
-				default: '',
-				description: 'Replace text on a message you sent (iMessage)',
-			},
-			{
-				displayName: 'Effect',
-				name: 'effect',
-				type: 'options',
-				options: EFFECT_OPTIONS,
-				default: 'none',
-				description: 'Bubble or screen effect for iMessage',
-			},
-			{
-				displayName: 'File Name',
-				name: 'fileName',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'File Path',
-				name: 'filePath',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'Lookup Message ID',
-				name: 'lookupMessageId',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'MIME Type',
-				name: 'mimeType',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'Poll Options',
-				name: 'pollOptions',
-				type: 'string',
-				default: '',
-				placeholder: 'Option 1, Option 2, Option 3',
-				description: 'Comma-separated (minimum 2)',
-			},
-			{
-				displayName: 'Poll Title',
-				name: 'pollTitle',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'Reply Attachment Binary',
-				name: 'replyAttachmentBinary',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'Reply Attachment Path',
-				name: 'replyAttachmentPath',
-				type: 'string',
-				default: '',
-			},
-			{
-				displayName: 'Send From Phone',
-				name: 'fromPhone',
-				type: 'string',
-				default: '',
-				description: 'Dedicated iMessage line only',
-			},
-			{
-				displayName: 'Source',
-				name: 'attachmentSource',
-				type: 'options',
-				options: [
-					{ name: 'File Path', value: 'path' },
-					{ name: 'Binary Property', value: 'binary' },
-				],
-				default: 'path',
-			},
-			{
-				displayName: 'Typing Delay (Ms)',
-				name: 'wrapDelay',
-				type: 'number',
-				default: 1500,
-			},
-			{
-				displayName: 'URL',
-				name: 'url',
-				type: 'string',
-				default: '',
-				placeholder: 'https://example.com',
-			},
-			{
-				displayName: 'Voice Duration (Seconds)',
-				name: 'duration',
-				type: 'number',
-				default: 0,
-			},
+			{ name: 'Start', value: 'start' },
+			{ name: 'Stop', value: 'stop' },
 		],
+		default: 'start',
+		displayOptions: { show: { operation: ['typing'] } },
+	},
+	{
+		displayName: 'Send From Phone',
+		name: 'fromPhone',
+		type: 'string',
+		default: '',
+		description: 'Dedicated iMessage line in E.164 format (e.g. +15551234567) — leave blank for default',
 	},
 ];

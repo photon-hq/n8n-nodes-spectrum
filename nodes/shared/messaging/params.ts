@@ -3,7 +3,6 @@ import type { IExecuteFunctions } from 'n8n-workflow';
 import type { IMessageEffect } from './types';
 
 export interface NodeMessagingOptions {
-	sendContentType?: string;
 	effect?: IMessageEffect | 'none';
 	fromPhone?: string;
 	attachmentSource?: 'path' | 'binary';
@@ -12,10 +11,11 @@ export interface NodeMessagingOptions {
 	fileName?: string;
 	mimeType?: string;
 	duration?: number;
-	url?: string;
+	asVoiceNote?: boolean;
+	linkPreview?: boolean;
+	replyLinkPreview?: boolean;
 	replyAttachmentPath?: string;
 	replyAttachmentBinary?: string;
-	wrapDelay?: number;
 	pollTitle?: string;
 	pollOptions?: string;
 	vcard?: string;
@@ -23,14 +23,50 @@ export interface NodeMessagingOptions {
 	contactLast?: string;
 	contactPhones?: string;
 	customPayload?: unknown;
-	lookupMessageId?: string;
+	groupCaption?: string;
+	groupFilePaths?: string;
+	groupBinaryProperties?: string;
+	groupAttachmentSource?: 'path' | 'binary';
 }
 
 export function readMessagingOptions(
 	ctx: IExecuteFunctions,
 	itemIndex: number,
 ): NodeMessagingOptions {
-	return ctx.getNodeParameter('options', itemIndex, {}) as NodeMessagingOptions;
+	return {
+		effect: ctx.getNodeParameter('effect', itemIndex, 'none') as IMessageEffect | 'none',
+		fromPhone: ctx.getNodeParameter('fromPhone', itemIndex, '') as string,
+		attachmentSource: ctx.getNodeParameter('attachmentSource', itemIndex, 'path') as
+			| 'path'
+			| 'binary',
+		filePath: ctx.getNodeParameter('filePath', itemIndex, '') as string,
+		binaryProperty: ctx.getNodeParameter('binaryProperty', itemIndex, 'data') as string,
+		fileName: ctx.getNodeParameter('fileName', itemIndex, '') as string,
+		mimeType: ctx.getNodeParameter('mimeType', itemIndex, '') as string,
+		duration: ctx.getNodeParameter('duration', itemIndex, 0) as number,
+		asVoiceNote: ctx.getNodeParameter('asVoiceNote', itemIndex, false) as boolean,
+		linkPreview: ctx.getNodeParameter('linkPreview', itemIndex, true) as boolean,
+		replyLinkPreview: ctx.getNodeParameter('replyLinkPreview', itemIndex, true) as boolean,
+		replyAttachmentPath: ctx.getNodeParameter('replyAttachmentPath', itemIndex, '') as string,
+		replyAttachmentBinary: ctx.getNodeParameter(
+			'replyAttachmentBinary',
+			itemIndex,
+			'',
+		) as string,
+		pollTitle: ctx.getNodeParameter('pollTitle', itemIndex, '') as string,
+		pollOptions: ctx.getNodeParameter('pollOptions', itemIndex, '') as string,
+		vcard: ctx.getNodeParameter('vcard', itemIndex, '') as string,
+		contactFirst: ctx.getNodeParameter('contactFirst', itemIndex, '') as string,
+		contactLast: ctx.getNodeParameter('contactLast', itemIndex, '') as string,
+		contactPhones: ctx.getNodeParameter('contactPhones', itemIndex, '') as string,
+		customPayload: ctx.getNodeParameter('customPayload', itemIndex, {}) as unknown,
+		groupCaption: ctx.getNodeParameter('groupCaption', itemIndex, '') as string,
+		groupFilePaths: ctx.getNodeParameter('groupFilePaths', itemIndex, '') as string,
+		groupBinaryProperties: ctx.getNodeParameter('groupBinaryProperties', itemIndex, '') as string,
+		groupAttachmentSource: ctx.getNodeParameter('groupAttachmentSource', itemIndex, 'path') as
+			| 'path'
+			| 'binary',
+	};
 }
 
 export function pollOptionsFromString(raw: string | undefined): Array<{ option: string }> {
@@ -40,4 +76,12 @@ export function pollOptionsFromString(raw: string | undefined): Array<{ option: 
 		.map((value) => value.trim())
 		.filter(Boolean)
 		.map((option) => ({ option }));
+}
+
+export function splitList(raw: string | undefined): string[] {
+	if (!raw?.trim()) return [];
+	return raw
+		.split(',')
+		.map((value) => value.trim())
+		.filter(Boolean);
 }

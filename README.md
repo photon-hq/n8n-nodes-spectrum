@@ -2,14 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). **Listen to incoming messages** and **send replies on iMessage** from n8n workflows. Channel setup happens in the [Spectrum dashboard](https://app.photon.codes).
+n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). **Listen to inbound text** and **send on iMessage** from n8n workflows. Channel setup happens in the [Spectrum dashboard](https://app.photon.codes).
 
 ## What you get
 
 | Node | What it does |
 |------|----------------|
-| **Spectrum Trigger** | Starts a workflow when someone sends a **text** message (iMessage or Slack inbound) |
-| **Spectrum** | Send, reply, and react on iMessage — advanced content types live under **Options** |
+| **Spectrum Trigger** | Starts a workflow on inbound **iMessage text** |
+| **Spectrum** | **Send**, **Reply**, **React**, **Show Typing**, and **Group** on iMessage |
 
 ## Getting started
 
@@ -19,24 +19,27 @@ n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). *
 
 Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) for a starter template.
 
-## Spectrum by Photon (action)
+## Spectrum by Photon (action — iMessage outbound)
 
-**Platform:** iMessage (Slack send coming when the SDK adds a provider)
+| Action | What it does |
+|--------|----------------|
+| **Send** | Text (default), file, poll, or contact card — set **Message Format** on the node |
+| **Reply** | Threaded reply with optional attachment |
+| **React** | iMessage tapback |
+| **Show Typing** | Start or stop the typing indicator before a slow reply |
+| **Group** | Create a group chat or send multiple files as one album |
 
-**Actions:**
-- **Send** — text by default; set Content Type in **Options** for attachments, voice, rich links, polls, etc.
-- **Reply** — threaded reply after the trigger
-- **React** — iMessage tapbacks
+**Link preview:** For text sends, enable **Link Preview** in Options — this turns on iMessage `enableLinkPreview` for URLs in the message (same path as [spectrum-ts rich links](https://photon.codes/docs/spectrum-ts/content#rich-links)).
 
-**Options** collection holds effects, file paths, poll fields, custom JSON, and other advanced settings.
+## Spectrum Trigger (inbound — text only)
 
-## Spectrum Trigger
+Spectrum webhooks deliver **inbound text only** today. Photos, files, polls, and reactions are not usable in n8n until Spectrum adds downloadable webhook payloads.
 
-Inbound **text only** — photos, files, polls, and reactions are ignored until Spectrum ships downloadable webhook payloads.
+**Output:** `$json.text`, `$json.sender` (phone or email from iMessage), `$json.messageId`, `$json.platform`, `$json.spaceId`
 
-Output: `$json.text`, `$json.sender`, `$json.messageId`, `$json.platform`, `$json.spaceId`
+**Outbound:** Spectrum action nodes require **E.164 phone numbers** (`+15551234567`). Apple ID email is not supported for send/reply yet — contact [daniel@photon.codes](mailto:daniel@photon.codes) if you need that.
 
-Filters: platform, sender, DM vs group
+**Filters:** sender, space ID, DM vs group
 
 ## Development
 
@@ -47,9 +50,7 @@ npm run dev          # local: auto-starts ngrok/cloudflared + sets WEBHOOK_URL
 npm run dev:local    # local without tunnel (outbound action node only)
 ```
 
-**n8n Cloud:** install the published package — n8n already provides a public webhook URL; no tunnel needed.
-
-**Local trigger testing:** `npm run dev` detects local mode and starts ngrok (or cloudflared) automatically. Toggle the workflow **Active** or click **Test this trigger**, then iMessage your dedicated line.
+**Local trigger testing:** `npm run dev` starts ngrok automatically. Toggle the workflow **Active** or click **Test this trigger**, then text your dedicated line.
 
 Install a tunnel tool if needed: `brew install ngrok` (recommended) or `brew install cloudflared`.
 

@@ -1,6 +1,6 @@
 import type { PhotonSpectrumCloudApiCredentials } from '../credentials';
 
-export type MessagingPlatform = 'imessage' | 'slack';
+export type MessagingPlatform = 'imessage';
 
 export type SpectrumCredentials = PhotonSpectrumCloudApiCredentials;
 

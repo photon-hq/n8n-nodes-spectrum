@@ -7,7 +7,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
 
-import { SUBTITLE_BY_OPERATION, SUBTITLE_BY_PLATFORM } from '../shared/constants';
+import { SUBTITLE_BY_OPERATION } from '../shared/constants';
 import {
 	isDeliverabilityError,
 	throwDeliverabilityError,
@@ -16,7 +16,7 @@ import { spectrumProperties } from './descriptions';
 import { executeOperation } from './operations/executeOperation';
 
 function buildSubtitleExpression(): string {
-	return `={{ (${JSON.stringify(SUBTITLE_BY_PLATFORM)})[$parameter["platform"]] + ": " + (${JSON.stringify(SUBTITLE_BY_OPERATION)})[$parameter["operation"]] }}`;
+	return `={{ ${JSON.stringify(SUBTITLE_BY_OPERATION)}[$parameter["operation"]] }}`;
 }
 
 export class PhotonSpectrum implements INodeType {
@@ -27,8 +27,7 @@ export class PhotonSpectrum implements INodeType {
 		group: ['output'],
 		version: 1,
 		subtitle: buildSubtitleExpression(),
-		description:
-			'Send and reply on iMessage from your workflows. Set up channels in the Spectrum dashboard.',
+		description: 'Send, reply, react, show typing, and manage groups on iMessage.',
 		defaults: {
 			name: 'Spectrum by Photon',
 		},

@@ -12,6 +12,7 @@ import { NodeConnectionTypes } from 'n8n-workflow';
 import {
 	TRIGGER_QUICK_START,
 	TRIGGER_REPLY_HINT,
+	TRIGGER_SENDER_NOTE,
 	TRIGGER_WEBHOOK_HINT,
 	TRIGGER_WEBHOOK_SCOPE,
 } from '../shared/uxNotices';
@@ -34,12 +35,6 @@ const SPACE_TYPE_OPTIONS = [
 	{ name: 'Any', value: 'any' },
 	{ name: 'DM', value: 'dm', description: 'One-to-one conversations only' },
 	{ name: 'Group', value: 'group', description: 'Group chats only' },
-];
-
-const PLATFORM_FILTER_OPTIONS = [
-	{ name: 'Any', value: '' },
-	{ name: 'iMessage', value: 'imessage' },
-	{ name: 'Slack', value: 'slack' },
 ];
 
 interface StoredWebhook {
@@ -75,7 +70,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 		version: 1,
 		subtitle: 'inbound text',
 		description:
-			'Starts your workflow when someone sends a text message on Spectrum (iMessage or Slack). Activating registers the webhook automatically.',
+			'Starts your workflow when someone sends an iMessage text on Spectrum. Activating registers the webhook automatically.',
 		defaults: {
 			name: 'On Spectrum Message',
 		},
@@ -106,6 +101,12 @@ export class PhotonSpectrumTrigger implements INodeType {
 			{
 				displayName: TRIGGER_REPLY_HINT,
 				name: 'replyNotice',
+				type: 'notice',
+				default: '',
+			},
+			{
+				displayName: TRIGGER_SENDER_NOTE,
+				name: 'senderPhoneNotice',
 				type: 'notice',
 				default: '',
 			},
@@ -147,20 +148,13 @@ export class PhotonSpectrumTrigger implements INodeType {
 				default: {},
 				options: [
 					{
-						displayName: 'Platform',
-						name: 'platform',
-						type: 'options',
-						options: PLATFORM_FILTER_OPTIONS,
-						default: '',
-						description: 'Only run for messages from this channel (iMessage, Slack, etc.)',
-					},
-					{
 						displayName: 'Sender Address',
 						name: 'senderAddress',
 						type: 'string',
 						default: '',
-						placeholder: '+15551234567 or alice@example.com',
-						description: 'Only run when this person sent the message (phone number or email)',
+						placeholder: '+15551234567',
+						description:
+							'Only run when this sender ID matches (phone or email as delivered in the webhook)',
 					},
 					{
 						displayName: 'Space ID',
@@ -294,17 +288,15 @@ export class PhotonSpectrumTrigger implements INodeType {
 		const senderAddress = message.sender?.id ?? '';
 		const spaceId = message.space?.id ?? payload.space?.id ?? '';
 		const platform = normalizePlatform(message.platform ?? payload.space?.platform);
+		if (platform && platform !== 'imessage') {
+			return { webhookResponse: 'ok', noWebhookResponse: false };
+		}
 
 		const filters = this.getNodeParameter('filters', {}) as {
-			platform?: string;
 			senderAddress?: string;
 			spaceType?: 'any' | 'dm' | 'group';
 			spaceId?: string;
 		};
-
-		if (filters.platform && platform && filters.platform !== platform) {
-			return { webhookResponse: 'ok', noWebhookResponse: false };
-		}
 
 		if (
 			filters.senderAddress &&

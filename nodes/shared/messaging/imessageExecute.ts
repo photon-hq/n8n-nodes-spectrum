@@ -2,10 +2,28 @@ import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
 import { resolveEffect } from './effects';
-import { pollOptionsFromString, readMessagingOptions, type NodeMessagingOptions } from './params';
+import {
+	pollOptionsFromString,
+	readMessagingOptions,
+	splitList,
+	type NodeMessagingOptions,
+} from './params';
+import { assertPhoneRecipient } from './recipients';
 import { resolveSpace, splitAddresses } from './resolveSpace';
 import type { SpectrumSession } from './spectrumClient';
 import type { IMessageEffect } from './types';
+
+type SpectrumModule = SpectrumSession['sp'];
+
+/** iMessage sendText enableLinkPreview — spectrum-ts richlink path uses this internally. */
+function textContent(sp: SpectrumModule, message: string, linkPreview: boolean): unknown {
+	if (!linkPreview) {
+		return sp.text(message);
+	}
+	return {
+		build: async () => ({ type: 'richlink', url: message }),
+	};
+}
 
 function getFromPhone(options: NodeMessagingOptions): string {
 	return options.fromPhone?.trim() ?? '';
@@ -31,8 +49,6 @@ export async function executeImessageOperation(
 		case 'sendAttachment':
 		case 'sendVoice':
 			return sendAttachmentOrVoice(ctx, runtime, sp, operation, itemIndex, options);
-		case 'sendRichLink':
-			return sendRichLink(ctx, runtime, sp, itemIndex, options);
 		case 'replyToMessage':
 			return replyToMessage(ctx, runtime, sp, itemIndex, options);
 		case 'reactToMessage':
@@ -43,6 +59,12 @@ export async function executeImessageOperation(
 			return createPoll(ctx, runtime, sp, itemIndex, options);
 		case 'shareContact':
 			return shareContact(ctx, runtime, sp, itemIndex, options);
+		case 'sendTyping':
+			return sendTyping(ctx, runtime, sp, itemIndex, options);
+		case 'createGroup':
+			return createGroup(ctx, runtime, sp, itemIndex, options);
+		case 'sendGroupAlbum':
+			return sendGroupAlbum(ctx, runtime, sp, itemIndex, options);
 		default:
 			throw new NodeOperationError(
 				ctx.getNode(),
@@ -55,18 +77,19 @@ export async function executeImessageOperation(
 async function sendMessage(
 	ctx: IExecuteFunctions,
 	runtime: SpectrumSession['runtime'],
-	sp: SpectrumSession['sp'],
+	sp: SpectrumModule,
 	imessageModule: NonNullable<SpectrumSession['imessageModule']>,
 	effectBuilder: NonNullable<SpectrumSession['effect']>,
 	itemIndex: number,
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
-	const text = ctx.getNodeParameter('text', itemIndex) as string;
+	const message = ctx.getNodeParameter('text', itemIndex) as string;
 	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const linkPreview = options.linkPreview !== false;
 
+	let content: unknown = textContent(sp, message, linkPreview);
 	const effect = (options.effect ?? 'none') as IMessageEffect;
-	let content: unknown = sp.text(text);
 	if (effect && effect !== 'none') {
 		const effectValue = resolveEffect(imessageModule.imessage, effect, ctx.logger);
 		if (effectValue) content = effectBuilder(content, effectValue);
@@ -83,7 +106,7 @@ async function sendMessage(
 async function sendAttachmentOrVoice(
 	ctx: IExecuteFunctions,
 	runtime: SpectrumSession['runtime'],
-	sp: SpectrumSession['sp'],
+	sp: SpectrumModule,
 	operation: string,
 	itemIndex: number,
 	options: NodeMessagingOptions,
@@ -123,38 +146,22 @@ async function sendAttachmentOrVoice(
 	return { platform: 'imessage', spaceId: space.id, messageId: (result as { id?: string } | undefined)?.id };
 }
 
-async function sendRichLink(
-	ctx: IExecuteFunctions,
-	runtime: SpectrumSession['runtime'],
-	sp: SpectrumSession['sp'],
-	itemIndex: number,
-	options: NodeMessagingOptions,
-): Promise<IDataObject> {
-	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
-	const url = options.url ?? '';
-	if (!url) {
-		throw new NodeOperationError(ctx.getNode(), 'URL is required in Options', { itemIndex });
-	}
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
-	const result = await space.send(sp.richlink(url) as Parameters<typeof space.send>[0]);
-	return { platform: 'imessage', spaceId: space.id, messageId: (result as { id?: string } | undefined)?.id };
-}
-
 async function replyToMessage(
 	ctx: IExecuteFunctions,
 	runtime: SpectrumSession['runtime'],
-	sp: SpectrumSession['sp'],
+	sp: SpectrumModule,
 	itemIndex: number,
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('targetRecipients', itemIndex) as string);
 	const targetId = ctx.getNodeParameter('targetMessageId', itemIndex) as string;
 	const replyText = ctx.getNodeParameter('replyText', itemIndex, '') as string;
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getFromPhone(options), 'Conversation With');
 	const target = (await space.getMessage(targetId)) as Parameters<typeof sp.reply>[1];
+	const linkPreview = options.replyLinkPreview !== false;
 
 	const inner: unknown[] = [];
-	if (replyText) inner.push(sp.text(replyText));
+	if (replyText) inner.push(textContent(sp, replyText, linkPreview));
 	if (options.replyAttachmentPath) inner.push(sp.attachment(options.replyAttachmentPath));
 	else if (options.replyAttachmentBinary) {
 		const binary = await ctx.helpers.getBinaryDataBuffer(itemIndex, options.replyAttachmentBinary);
@@ -201,16 +208,129 @@ async function reactToMessage(
 	if (!reaction) {
 		throw new NodeOperationError(ctx.getNode(), 'Reaction is required', { itemIndex });
 	}
-	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const space = await resolveSpace(runtime, recipients, getFromPhone(options), 'Conversation With');
 	const target = await space.getMessage(targetId);
 	await target.react(reaction);
 	return { platform: 'imessage', spaceId: space.id, targetId, reaction };
 }
 
+async function sendTyping(
+	ctx: IExecuteFunctions,
+	runtime: SpectrumSession['runtime'],
+	sp: SpectrumModule,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): Promise<IDataObject> {
+	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
+	const typingAction = ctx.getNodeParameter('typingAction', itemIndex, 'start') as 'start' | 'stop';
+	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	await space.send(sp.typing(typingAction) as Parameters<typeof space.send>[0]);
+	return {
+		platform: 'imessage',
+		spaceId: space.id,
+		typing: typingAction,
+	};
+}
+
+async function createGroup(
+	ctx: IExecuteFunctions,
+	runtime: SpectrumSession['runtime'],
+	sp: SpectrumModule,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): Promise<IDataObject> {
+	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
+	if (recipients.length < 2) {
+		throw new NodeOperationError(
+			ctx.getNode(),
+			'Create Group requires at least two recipients (comma-separated phone numbers)',
+			{ itemIndex },
+		);
+	}
+	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const welcome = String(ctx.getNodeParameter('groupWelcomeMessage', itemIndex, '')).trim();
+	let messageId: string | undefined;
+	if (welcome) {
+		const result = await space.send(sp.text(welcome) as Parameters<typeof space.send>[0]);
+		messageId = (result as { id?: string } | undefined)?.id;
+	}
+	return {
+		platform: 'imessage',
+		spaceId: space.id,
+		type: 'group',
+		messageId,
+	};
+}
+
+async function sendGroupAlbum(
+	ctx: IExecuteFunctions,
+	runtime: SpectrumSession['runtime'],
+	sp: SpectrumModule,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): Promise<IDataObject> {
+	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
+	const space = await resolveSpace(runtime, recipients, getFromPhone(options));
+	const source = options.groupAttachmentSource ?? 'path';
+	const items: unknown[] = [];
+
+	const caption = options.groupCaption?.trim();
+	if (caption) items.push(sp.text(caption));
+
+	if (source === 'path') {
+		const paths = splitList(options.groupFilePaths);
+		if (paths.length < 2) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Send Album requires at least two file paths (comma-separated in Options)',
+				{ itemIndex },
+			);
+		}
+		for (const filePath of paths) {
+			items.push(sp.attachment(filePath));
+		}
+	} else {
+		const properties = splitList(options.groupBinaryProperties);
+		if (properties.length < 2) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				'Send Album requires at least two binary properties (comma-separated in Options)',
+				{ itemIndex },
+			);
+		}
+		for (const property of properties) {
+			const binary = await ctx.helpers.getBinaryDataBuffer(itemIndex, property);
+			const binaryMeta = ctx.helpers.assertBinaryData(itemIndex, property);
+			items.push(
+				sp.attachment(binary, {
+					name: binaryMeta.fileName || 'file',
+					mimeType: binaryMeta.mimeType,
+				}),
+			);
+		}
+	}
+
+	if (items.length < 2) {
+		throw new NodeOperationError(ctx.getNode(), 'Send Album requires at least two items', {
+			itemIndex,
+		});
+	}
+
+	const result = await space.send(
+		(sp.group as (...parts: unknown[]) => unknown)(...items) as Parameters<typeof space.send>[0],
+	);
+	return {
+		platform: 'imessage',
+		spaceId: space.id,
+		messageId: (result as { id?: string } | undefined)?.id,
+		itemCount: items.length,
+	};
+}
+
 async function sendCustom(
 	ctx: IExecuteFunctions,
 	runtime: SpectrumSession['runtime'],
-	sp: SpectrumSession['sp'],
+	sp: SpectrumModule,
 	itemIndex: number,
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
@@ -226,7 +346,7 @@ async function sendCustom(
 async function createPoll(
 	ctx: IExecuteFunctions,
 	runtime: SpectrumSession['runtime'],
-	sp: SpectrumSession['sp'],
+	sp: SpectrumModule,
 	itemIndex: number,
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
@@ -236,7 +356,7 @@ async function createPoll(
 	if (!title || pollOptions.length < 2) {
 		throw new NodeOperationError(
 			ctx.getNode(),
-			'Poll title and at least 2 comma-separated options are required in Options',
+			'Poll title and at least 2 comma-separated options are required',
 			{ itemIndex },
 		);
 	}
@@ -258,7 +378,7 @@ async function createPoll(
 async function shareContact(
 	ctx: IExecuteFunctions,
 	runtime: SpectrumSession['runtime'],
-	sp: SpectrumSession['sp'],
+	sp: SpectrumModule,
 	itemIndex: number,
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
@@ -272,15 +392,18 @@ async function shareContact(
 		const phones = (options.contactPhones ?? '')
 			.split(',')
 			.map((value) => value.trim())
-			.filter(Boolean)
-			.map((value) => ({ value }));
+			.filter(Boolean);
+		for (const phone of phones) {
+			assertPhoneRecipient(phone, 'Contact Phones');
+		}
+		const phoneEntries = phones.map((value) => ({ value }));
 		const input: Record<string, unknown> = {
 			name: {
 				first: options.contactFirst || undefined,
 				last: options.contactLast || undefined,
 			},
 		};
-		if (phones.length > 0) input.phones = phones;
+		if (phoneEntries.length > 0) input.phones = phoneEntries;
 		contactContent = (sp.contact as (input: unknown) => unknown)(input);
 	}
 

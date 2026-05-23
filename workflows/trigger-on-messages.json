@@ -2,11 +2,7 @@
 	"name": "Spectrum - Auto-reply starter",
 	"nodes": [
 		{
-			"parameters": {
-				"filters": {
-					"platform": "imessage"
-				}
-			},
+			"parameters": {},
 			"type": "n8n-nodes-spectrum.photonSpectrumTrigger",
 			"typeVersion": 1,
 			"position": [0, 0],
@@ -22,7 +18,6 @@
 		},
 		{
 			"parameters": {
-				"platform": "imessage",
 				"operation": "reply",
 				"targetRecipients": "={{ $json.sender }}",
 				"targetMessageId": "={{ $json.messageId }}",

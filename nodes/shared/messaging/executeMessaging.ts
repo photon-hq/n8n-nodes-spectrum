@@ -4,26 +4,15 @@ import { NodeOperationError } from 'n8n-workflow';
 import { executeImessageOperation } from './imessageExecute';
 import { readMessagingOptions } from './params';
 import type { SpectrumSession } from './spectrumClient';
-import type { MessagingPlatform } from './types';
 
-function mapSendOperation(platform: MessagingPlatform, contentType: string): string {
-	if (platform === 'slack') {
-		return contentType === 'attachment' ? 'sendAttachment' : 'sendMessage';
-	}
-
-	switch (contentType) {
-		case 'attachment':
-			return 'sendAttachment';
-		case 'voice':
-			return 'sendVoice';
-		case 'richLink':
-			return 'sendRichLink';
+function mapSendOperation(format: string, asVoiceNote: boolean): string {
+	switch (format) {
+		case 'file':
+			return asVoiceNote ? 'sendVoice' : 'sendAttachment';
 		case 'poll':
 			return 'createPoll';
 		case 'contact':
 			return 'shareContact';
-		case 'custom':
-			return 'sendCustom';
 		default:
 			return 'sendMessage';
 	}
@@ -32,25 +21,32 @@ function mapSendOperation(platform: MessagingPlatform, contentType: string): str
 export async function executeMessagingOperation(
 	ctx: IExecuteFunctions,
 	session: SpectrumSession,
-	platform: MessagingPlatform,
 	itemIndex: number,
 ): Promise<IDataObject> {
-	if (platform === 'slack') {
-		throw new NodeOperationError(
-			ctx.getNode(),
-			'Slack send is not available yet — the Spectrum SDK does not include a Slack provider. Use the trigger to receive Slack messages; outbound Slack is coming soon.',
-			{ itemIndex },
-		);
-	}
-
 	const operation = ctx.getNodeParameter('operation', itemIndex) as string;
 	const options = readMessagingOptions(ctx, itemIndex);
 
 	if (operation === 'send') {
-		const contentType = options.sendContentType ?? 'text';
-		const mapped = mapSendOperation(platform, contentType);
+		const sendFormat = ctx.getNodeParameter('sendFormat', itemIndex, 'text') as string;
+		const mapped = mapSendOperation(sendFormat, options.asVoiceNote === true);
 		if (mapped === 'sendMessage' && !String(ctx.getNodeParameter('text', itemIndex, '')).trim()) {
 			throw new NodeOperationError(ctx.getNode(), 'Message text is required', { itemIndex });
+		}
+		if (mapped === 'createPoll') {
+			const title = ctx.getNodeParameter('pollTitle', itemIndex, '') as string;
+			if (!title.trim()) {
+				throw new NodeOperationError(ctx.getNode(), 'Poll title is required', { itemIndex });
+			}
+			options.pollTitle = title;
+			options.pollOptions = ctx.getNodeParameter('pollOptions', itemIndex, '') as string;
+		}
+		if (mapped === 'sendCustom') {
+			options.customPayload = ctx.getNodeParameter('customPayload', itemIndex, {}) as unknown;
+		}
+		if (mapped === 'sendAttachment' || mapped === 'sendVoice') {
+			if (options.attachmentSource === 'path') {
+				options.filePath = ctx.getNodeParameter('filePath', itemIndex, '') as string;
+			}
 		}
 		return executeImessageOperation(ctx, session, mapped, itemIndex, options);
 	}
@@ -61,6 +57,18 @@ export async function executeMessagingOperation(
 
 	if (operation === 'react') {
 		return executeImessageOperation(ctx, session, 'reactToMessage', itemIndex, options);
+	}
+
+	if (operation === 'typing') {
+		return executeImessageOperation(ctx, session, 'sendTyping', itemIndex, options);
+	}
+
+	if (operation === 'group') {
+		const groupOperation = ctx.getNodeParameter('groupOperation', itemIndex, 'create') as string;
+		if (groupOperation === 'sendAlbum') {
+			return executeImessageOperation(ctx, session, 'sendGroupAlbum', itemIndex, options);
+		}
+		return executeImessageOperation(ctx, session, 'createGroup', itemIndex, options);
 	}
 
 	throw new NodeOperationError(ctx.getNode(), `Unknown operation "${operation}"`, { itemIndex });

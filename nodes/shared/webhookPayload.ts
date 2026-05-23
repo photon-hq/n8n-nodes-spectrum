@@ -22,9 +22,6 @@ export function normalizePlatform(platform: string | undefined): string {
 	const raw = (platform ?? '').trim().toLowerCase();
 	if (!raw) return '';
 	if (raw === 'imessage' || raw === 'i message') return 'imessage';
-	if (raw.includes('whatsapp')) return 'whatsapp_business';
-	if (raw === 'slack') return 'slack';
-	if (raw === 'voice') return 'voice';
 	return raw.replace(/\s+/g, '_');
 }
 

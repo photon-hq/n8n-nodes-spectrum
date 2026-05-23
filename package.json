@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-spectrum",
   "version": "1.0.0",
-  "description": "n8n community node for Photon Spectrum — manage platforms, webhooks, and multi-channel messaging via Spectrum Cloud",
+  "description": "n8n community node for Photon Spectrum — inbound text webhooks and iMessage send/reply/react/typing/group",
   "license": "MIT",
   "keywords": [
     "n8n-community-node-package",
@@ -10,9 +10,7 @@
     "n8n",
     "automation",
     "messaging",
-    "imessage",
-    "slack",
-    "voice"
+    "imessage"
   ],
   "author": {
     "name": "Photon AI",

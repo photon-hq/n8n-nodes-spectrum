@@ -1,5 +1,4 @@
-import { ApplicationError } from 'n8n-workflow';
-
+import { assertOptionalFromPhone, assertPhoneRecipients } from './recipients';
 import type { PlatformRuntime, ResolvedSpace } from './types';
 
 export function splitAddresses(raw: string): string[] {
@@ -13,10 +12,10 @@ export async function resolveSpace(
 	platform: PlatformRuntime,
 	recipients: string[],
 	fromPhone?: string,
+	fieldLabel = 'To',
 ): Promise<ResolvedSpace> {
-	if (recipients.length === 0) {
-		throw new ApplicationError('At least one recipient is required');
-	}
+	assertPhoneRecipients(recipients, fieldLabel);
+	assertOptionalFromPhone(fromPhone);
 	const users = await Promise.all(recipients.map((recipient) => platform.user(recipient)));
 	const args: unknown[] = [...users];
 	if (fromPhone) args.push({ phone: fromPhone });
