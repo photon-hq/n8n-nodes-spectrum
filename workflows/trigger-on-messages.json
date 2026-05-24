@@ -7,7 +7,7 @@
 			"typeVersion": 1,
 			"position": [0, 0],
 			"id": "spectrum-trigger",
-			"name": "On iMessage Event",
+			"name": "On Spectrum Message",
 			"webhookId": "REPLACE_AFTER_ACTIVATION",
 			"credentials": {
 				"photonSpectrumCloudApi": {
@@ -37,7 +37,7 @@
 		}
 	],
 	"connections": {
-		"On iMessage Event": {
+		"On Spectrum Message": {
 			"main": [
 				[
 					{

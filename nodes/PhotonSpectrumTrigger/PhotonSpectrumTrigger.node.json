@@ -3,7 +3,7 @@
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Communication"],
-	"alias": ["Spectrum Trigger", "Photon Trigger", "Spectrum Cloud Trigger", "Spectrum Webhook", "On Message"],
+	"alias": ["On Spectrum Message", "Spectrum Message", "Spectrum Trigger", "iMessage"],
 	"subcategories": {
 		"Communication": ["Messaging"]
 	},
@@ -15,7 +15,7 @@
 		],
 		"primaryDocumentation": [
 			{
-				"url": "https://github.com/photon-hq/n8n-nodes-spectrum#spectrum-by-photon-trigger"
+				"url": "https://github.com/photon-hq/n8n-nodes-spectrum#readme"
 			}
 		]
 	}

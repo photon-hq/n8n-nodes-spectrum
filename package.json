@@ -33,6 +33,7 @@
     "dev": "node scripts/dev-with-tunnel.mjs",
     "dev:local": "NO_TUNNEL=1 node scripts/dev-with-tunnel.mjs",
     "dev:tunnel": "node scripts/dev-with-tunnel.mjs",
+    "link:dev": "node scripts/link-dev-package.mjs",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
     "scan": "n8n-node build && node scripts/scan-local.mjs",

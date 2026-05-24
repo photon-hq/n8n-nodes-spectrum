@@ -8,7 +8,7 @@ n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). *
 
 | Node | What it does |
 |------|----------------|
-| **Spectrum Trigger** | Starts a workflow on inbound **iMessage text** (default name: **On iMessage Event**) |
+| **Spectrum Trigger** | Starts a workflow when an inbound **text message** is received (default name: **On Spectrum Message**) |
 | **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React to a message**, and more via **Show Expert Options** |
 
 ## Getting started
@@ -25,7 +25,7 @@ Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) 
 |--------|----------------|
 | **Send a message** | Plain text with optional link preview |
 | **Send an attachment** | Photo, PDF, or other file — from the previous step or a saved file |
-| **Reply in thread** | Threaded reply — wire after **On iMessage Event** |
+| **Reply in thread** | Threaded reply to an inbound message |
 | **React to a message** | iMessage tapback |
 | **Show Expert Options** | Voice notes, polls, contact cards, typing indicator, effects |
 
@@ -55,6 +55,18 @@ npm run dev:local    # local without tunnel (outbound action node only)
 **Local trigger testing:** `npm run dev` starts ngrok automatically. Toggle the workflow **Active** or click **Test this trigger**, then text your dedicated line.
 
 Install a tunnel tool if needed: `brew install ngrok` (recommended) or `brew install cloudflared`.
+
+### `Unrecognized node type: CUSTOM.photonSpectrumTrigger`
+
+Older local dev sessions registered nodes as `CUSTOM.photonSpectrumTrigger`. Current dev and npm installs use `n8n-nodes-spectrum.photonSpectrumTrigger`.
+
+1. Run `npm run build` then `npm run dev` (or `npm run link:dev` if n8n is already running).
+2. In the workflow, replace node types:
+   - `CUSTOM.photonSpectrumTrigger` → `n8n-nodes-spectrum.photonSpectrumTrigger`
+   - `CUSTOM.photonSpectrum` → `n8n-nodes-spectrum.photonSpectrum`
+3. Or delete and re-add the **On Spectrum Message** / **Spectrum** nodes from the picker.
+
+On n8n Cloud or self-hosted production, install **n8n-nodes-spectrum** from Community Nodes (Settings → Community Nodes).
 
 ## License
 

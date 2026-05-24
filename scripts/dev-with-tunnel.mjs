@@ -2,12 +2,23 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { linkDevPackage } from './link-dev-package.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
+const N8N_USER_FOLDER = process.env.N8N_USER_FOLDER ?? path.join(os.homedir(), '.n8n-node-cli');
 const N8N_PORT = process.env.N8N_PORT || '5678';
+const TRIGGER_DIST = path.join(
+	ROOT,
+	'dist',
+	'nodes',
+	'PhotonSpectrumTrigger',
+	'PhotonSpectrumTrigger.node.js',
+);
 const TUNNEL_TARGET = `http://127.0.0.1:${N8N_PORT}`;
 const TUNNEL_MODE = (process.env.TUNNEL || 'auto').toLowerCase();
 const CLOUDFLARE_URL_RE = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i;
@@ -24,6 +35,7 @@ const children = [];
 let shuttingDown = false;
 let restartingN8n = false;
 let tunnelKind = 'unknown';
+let tscWatchProc = null;
 
 function findBin(name) {
 	const checked = spawnSync('which', [name], { encoding: 'utf8' });
@@ -175,24 +187,71 @@ function isPublicWebhookUrl(webhookUrl) {
 	return typeof webhookUrl === 'string' && webhookUrl.length > 0 && !isLocalWebhookUrl(webhookUrl);
 }
 
-function spawnPlainN8nDev(n8nNodeBin, webhookUrl) {
-	const env = { ...process.env, N8N_PORT };
+function ensureDevBuild() {
+	if (fs.existsSync(TRIGGER_DIST)) return;
+	console.log(`${CYAN}▸${RESET} Building package (missing dist/)…`);
+	const result = spawnSync('npm', ['run', 'build'], { cwd: ROOT, stdio: 'inherit' });
+	if (result.status !== 0) {
+		process.exit(result.status ?? 1);
+	}
+}
+
+function prepareDevPackage() {
+	ensureDevBuild();
+	const { communityLink, reused } = linkDevPackage({ n8nUserFolder: N8N_USER_FOLDER });
+	const verb = reused ? 'Using' : 'Linked';
+	console.log(
+		`${GREEN}✓${RESET} ${verb} community package at ${DIM}${communityLink}${RESET}`,
+	);
+	console.log(
+		`${DIM}Node types: n8n-nodes-spectrum.photonSpectrumTrigger (matches npm install)${RESET}`,
+	);
+}
+
+function startTscWatch() {
+	if (tscWatchProc && tscWatchProc.exitCode === null && !tscWatchProc.killed) {
+		return tscWatchProc;
+	}
+	console.log(`${CYAN}▸${RESET} TypeScript watch (rebuild on save)`);
+	tscWatchProc = track(
+		spawn('npm', ['exec', '--', 'tsc', '--watch', '--pretty'], {
+			cwd: ROOT,
+			stdio: 'inherit',
+		}),
+	);
+	return tscWatchProc;
+}
+
+function spawnN8nProcess(webhookUrl) {
+	prepareDevPackage();
+	const env = {
+		...process.env,
+		N8N_DEV_RELOAD: 'true',
+		N8N_USER_FOLDER,
+		DB_SQLITE_POOL_SIZE: '10',
+		N8N_PORT,
+	};
 	if (webhookUrl) env.WEBHOOK_URL = webhookUrl;
-	return spawn(n8nNodeBin, ['dev'], {
-		cwd: ROOT,
+	return spawn('npx', ['-y', '--prefer-online', 'n8n@latest'], {
+		cwd: N8N_USER_FOLDER,
 		env,
 		stdio: 'inherit',
 	});
 }
 
-async function runPlainDev(n8nNodeBin, reason) {
+function spawnDevStack(webhookUrl) {
+	startTscWatch();
+	return spawnN8nProcess(webhookUrl);
+}
+
+async function runPlainDev(reason) {
 	console.log(`${GREEN}✓${RESET} ${reason}`);
 	console.log(`${DIM}Editor: http://localhost:${N8N_PORT}${RESET}`);
 	if (process.env.WEBHOOK_URL) {
 		console.log(`${DIM}WEBHOOK_URL: ${process.env.WEBHOOK_URL}${RESET}`);
 	}
 	console.log('');
-	const dev = track(spawnPlainN8nDev(n8nNodeBin, process.env.WEBHOOK_URL));
+	const dev = track(spawnDevStack(process.env.WEBHOOK_URL));
 	dev.on('exit', (code, signal) => {
 		if (shuttingDown) return;
 		if (signal) shutdown(1);
@@ -200,11 +259,11 @@ async function runPlainDev(n8nNodeBin, reason) {
 	});
 }
 
-function spawnN8nDev(n8nNodeBin, publicUrl) {
-	return spawnPlainN8nDev(n8nNodeBin, publicUrl);
+function spawnN8nDev(publicUrl) {
+	return spawnN8nProcess(publicUrl);
 }
 
-async function restartN8nDev(n8nNodeBin, devRef, previousUrl, newUrl, onDevExit) {
+async function restartN8nDev(devRef, previousUrl, newUrl, onDevExit) {
 	console.log('');
 	console.log(`${YELLOW}!${RESET} Tunnel URL changed — restarting n8n with updated WEBHOOK_URL`);
 	console.log(`  ${previousUrl}`);
@@ -229,7 +288,7 @@ async function restartN8nDev(n8nNodeBin, devRef, previousUrl, newUrl, onDevExit)
 		restartingN8n = false;
 	}
 
-	const dev = track(spawnN8nDev(n8nNodeBin, newUrl));
+	const dev = track(spawnN8nDev(newUrl));
 	dev.on('exit', onDevExit);
 	devRef.current = dev;
 
@@ -314,8 +373,7 @@ async function startTunnel() {
 }
 
 async function main() {
-	const n8nNodeBin = path.join(ROOT, 'node_modules', '.bin', 'n8n-node');
-	if (!fs.existsSync(n8nNodeBin)) {
+	if (!fs.existsSync(path.join(ROOT, 'node_modules'))) {
 		console.error(`${YELLOW}Missing node_modules.${RESET} Run \`npm install\` first.`);
 		process.exit(1);
 	}
@@ -332,14 +390,11 @@ async function main() {
 
 	const configuredWebhookUrl = (process.env.WEBHOOK_URL || '').trim();
 	if (process.env.NO_TUNNEL === '1') {
-		await runPlainDev(n8nNodeBin, 'NO_TUNNEL=1 — starting n8n without ngrok (outbound-only local dev).');
+		await runPlainDev('NO_TUNNEL=1 — starting n8n without ngrok (outbound-only local dev).');
 		return;
 	}
 	if (isPublicWebhookUrl(configuredWebhookUrl)) {
-		await runPlainDev(
-			n8nNodeBin,
-			`Public WEBHOOK_URL already set — using n8n’s URL (n8n Cloud / custom domain).`,
-		);
+		await runPlainDev(`Public WEBHOOK_URL already set — using n8n’s URL (n8n Cloud / custom domain).`);
 		return;
 	}
 
@@ -379,8 +434,8 @@ async function main() {
 		else shutdown(code ?? 0);
 	};
 
-	console.log(`${CYAN}▸${RESET} Starting n8n-node dev…`);
-	devRef.current = track(spawnN8nDev(n8nNodeBin, currentPublicUrl));
+	console.log(`${CYAN}▸${RESET} Starting n8n dev stack…`);
+	devRef.current = track(spawnDevStack(currentPublicUrl));
 	devRef.current.on('exit', onDevExit);
 
 	try {
@@ -409,7 +464,7 @@ async function main() {
 				if (latest !== currentPublicUrl) {
 					const previousUrl = currentPublicUrl;
 					currentPublicUrl = latest;
-					await restartN8nDev(n8nNodeBin, devRef, previousUrl, latest, onDevExit);
+					await restartN8nDev(devRef, previousUrl, latest, onDevExit);
 					return;
 				}
 			} catch {

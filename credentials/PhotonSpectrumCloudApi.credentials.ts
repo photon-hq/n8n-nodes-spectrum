@@ -16,7 +16,7 @@ const CREDENTIAL_TEST_URL = `${DASHBOARD_URL}/api/auth/ok`;
 
 export class PhotonSpectrumCloudApi implements ICredentialType {
 	name = 'photonSpectrumCloudApi';
-	displayName = 'Photon Spectrum Cloud API';
+	displayName = 'Spectrum Cloud API';
 	icon = {
 		light: 'file:../nodes/PhotonSpectrum/spectrum.svg',
 		dark: 'file:../nodes/PhotonSpectrum/spectrum.svg',

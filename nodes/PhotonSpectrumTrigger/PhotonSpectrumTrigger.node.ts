@@ -25,11 +25,13 @@ import {
 } from '../shared/webhookApi';
 import { assertPublicWebhookUrl, isLocalWebhookUrl } from '../shared/webhookUrl';
 
-const SPACE_TYPE_OPTIONS = [
-	{ name: 'Any', value: 'any' },
-	{ name: 'DM', value: 'dm', description: 'One-to-one conversations only' },
-	{ name: 'Group', value: 'group', description: 'Group chats only' },
-];
+/** @deprecated Saved workflows may still have filter params — read at runtime only. */
+type TriggerFilters = {
+	senderAddress?: string;
+	spaceType?: 'any' | 'dm' | 'group';
+	spaceId?: string;
+	phoneNumber?: string;
+};
 
 interface StoredWebhook {
 	id: string;
@@ -57,15 +59,16 @@ async function readRawBody(
 // eslint-disable-next-line @n8n/community-nodes/node-usable-as-tool
 export class PhotonSpectrumTrigger implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Spectrum by Photon Trigger',
+		displayName: 'On Spectrum Message Trigger',
 		name: 'photonSpectrumTrigger',
 		icon: 'file:spectrum.svg',
 		group: ['trigger'],
 		version: 1,
-		subtitle: 'inbound text',
-		description: 'Runs when a text iMessage is received',
+		subtitle: 'message',
+		description: 'Starts the workflow when an inbound text message is received',
+		eventTriggerDescription: 'On Spectrum Message',
 		defaults: {
-			name: 'On iMessage Event',
+			name: 'On Spectrum Message',
 		},
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
@@ -84,65 +87,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 				required: true,
 			},
 		],
-		properties: [
-			{
-				displayName: 'Advanced Options',
-				name: 'advancedOptions',
-				type: 'collection',
-				placeholder: 'Add Option',
-				default: {},
-				options: [
-					{
-						displayName: 'Signing Secret',
-						name: 'signingSecret',
-						type: 'string',
-						typeOptions: { password: true },
-						default: '',
-						description: 'Signing secret for webhook verification. Set automatically when the workflow is activated.',
-					},
-				],
-			},
-			{
-				displayName: 'Filters',
-				name: 'filters',
-				type: 'collection',
-				placeholder: 'Add Filter',
-				default: {},
-				options: [
-					{
-						displayName: 'Line Phone Number',
-						name: 'phoneNumber',
-						type: 'string',
-						default: '',
-						placeholder: '+15551234567',
-						description: 'Only trigger for messages on this line number. Leave empty for all lines.',
-					},
-					{
-						displayName: 'Sender Address',
-						name: 'senderAddress',
-						type: 'string',
-						default: '',
-						placeholder: '+15551234567',
-						description: 'Only trigger for messages from this sender',
-					},
-					{
-						displayName: 'Space ID',
-						name: 'spaceId',
-						type: 'string',
-						default: '',
-						placeholder: 'any;-;+15551234567',
-						description: 'Only trigger for this conversation ID',
-					},
-					{
-						displayName: 'Space Type',
-						name: 'spaceType',
-						type: 'options',
-						options: SPACE_TYPE_OPTIONS,
-						default: 'any',
-					},
-				],
-			},
-		],
+		properties: [],
 	};
 
 	webhookMethods = {
@@ -261,12 +206,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 			return { webhookResponse: 'ok', noWebhookResponse: false };
 		}
 
-		const filters = this.getNodeParameter('filters', {}) as {
-			senderAddress?: string;
-			spaceType?: 'any' | 'dm' | 'group';
-			spaceId?: string;
-			phoneNumber?: string;
-		};
+		const filters = this.getNodeParameter('filters', {}) as TriggerFilters;
 
 		const spacePhone = extractSpacePhone(payload);
 

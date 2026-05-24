@@ -30,7 +30,7 @@ export class PhotonSpectrum implements INodeType {
 		group: ['output'],
 		version: 1,
 		subtitle: buildSubtitleExpression(),
-		description: 'Send and receive iMessage actions',
+		description: 'Send, reply, and react to messages on Spectrum',
 		defaults: {
 			name: 'Spectrum by Photon',
 		},
