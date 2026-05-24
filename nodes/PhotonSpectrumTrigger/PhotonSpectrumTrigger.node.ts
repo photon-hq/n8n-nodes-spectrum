@@ -59,7 +59,7 @@ async function readRawBody(
 // eslint-disable-next-line @n8n/community-nodes/node-usable-as-tool
 export class PhotonSpectrumTrigger implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'On Spectrum Message Trigger',
+		displayName: 'Spectrum Message Trigger',
 		name: 'photonSpectrumTrigger',
 		icon: 'file:spectrum.svg',
 		group: ['trigger'],
