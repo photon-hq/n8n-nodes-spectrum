@@ -66,7 +66,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 		version: 1,
 		subtitle: 'message',
 		description: 'Starts the workflow when an inbound text message is received',
-		eventTriggerDescription: 'On Spectrum Message',
+		eventTriggerDescription: 'Spectrum Message',
 		defaults: {
 			name: 'On Spectrum Message',
 		},
