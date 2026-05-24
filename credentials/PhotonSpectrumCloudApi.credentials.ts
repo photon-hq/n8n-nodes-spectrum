@@ -8,7 +8,7 @@ import type {
 	INodeProperties,
 } from 'n8n-workflow';
 
-import { CREDENTIAL_QUICK_START, DASHBOARD_URL } from '../nodes/shared/uxNotices';
+import { DASHBOARD_URL } from '../nodes/shared/uxNotices';
 import { photonHttpsJson, spectrumBasicAuth } from '../nodes/shared/photonHttp';
 
 const DEFAULT_RUNTIME = 'https://spectrum.photon.codes';
@@ -18,18 +18,12 @@ export class PhotonSpectrumCloudApi implements ICredentialType {
 	name = 'photonSpectrumCloudApi';
 	displayName = 'Photon Spectrum Cloud API';
 	icon = {
-		light: 'file:../nodes/PhotonSpectrum/Dark.svg',
-		dark: 'file:../nodes/PhotonSpectrum/Dark.svg',
+		light: 'file:../nodes/PhotonSpectrum/spectrum.svg',
+		dark: 'file:../nodes/PhotonSpectrum/spectrum.svg',
 	} as const;
 	documentationUrl = 'https://docs.photon.codes/spectrum-ts/getting-started';
 
 	properties: INodeProperties[] = [
-		{
-			displayName: CREDENTIAL_QUICK_START,
-			name: 'quickStartNotice',
-			type: 'notice',
-			default: '',
-		},
 		{
 			displayName: 'Project ID',
 			name: 'projectId',

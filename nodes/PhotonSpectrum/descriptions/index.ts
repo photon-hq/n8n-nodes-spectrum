@@ -1,15 +1,11 @@
 import type { INodeProperties } from 'n8n-workflow';
 
 import {
-	ACTION_LINE_HINT,
-	ACTION_QUICK_START,
-	EMAIL_OUTBOUND_CONTACT_PLAIN,
 	FROM_MESSAGE_ID,
 	FROM_SENDER,
-	FROM_SPACE_PHONE,
 	FROM_TEXT,
-	TO_IMESSAGE_REPLY,
-	TO_IMESSAGE_SEND,
+	LINK_PREVIEW_DESC,
+	PHONE_RECIPIENT_DESC,
 } from '../../shared/uxNotices';
 import { BUBBLE_EFFECTS, SCREEN_EFFECTS, TAPBACKS } from '../../shared/messaging/types';
 
@@ -18,213 +14,163 @@ const REACTION_OPTIONS = [
 		name: tapback.charAt(0).toUpperCase() + tapback.slice(1),
 		value: tapback,
 	})),
-	{ name: 'Custom', value: '__custom__' },
+	{ name: 'Custom (Emoji / String)', value: '__custom__' },
 ];
 
 const EFFECT_OPTIONS = [
-	{ name: 'None', value: 'none' as const },
+	{ name: 'None', value: 'none' as const, description: 'No effect' },
 	...BUBBLE_EFFECTS.map((effect) => ({
 		name: `Bubble: ${effect.charAt(0).toUpperCase() + effect.slice(1)}`,
 		value: effect,
+		description: 'Bubble effect on the message',
 	})),
 	...SCREEN_EFFECTS.map((effect) => ({
 		name: `Screen: ${effect.charAt(0).toUpperCase() + effect.slice(1)}`,
 		value: effect,
+		description: 'Full-screen effect for the recipient',
 	})),
 ];
 
-const SEND_FORMAT_OPTIONS: INodeProperties['options'] = [
+const CORE_OPERATIONS: INodeProperties['options'] = [
+	{
+		name: 'Send Message',
+		value: 'sendMessage',
+		description: 'Send a text message',
+	},
+	{
+		name: 'Send Attachment',
+		value: 'sendAttachment',
+		description: 'Send a file such as a photo or PDF',
+	},
+	{
+		name: 'Reply to Message',
+		value: 'replyToMessage',
+		description: 'Reply in the message thread',
+	},
+	{
+		name: 'React to Message',
+		value: 'reactToMessage',
+		description: 'Add a tapback reaction to a message',
+	},
+];
+
+const PRIMARY_PICKER_ACTIONS: Record<string, string> = {
+	sendMessage: 'Send a message',
+	sendAttachment: 'Send an attachment',
+	replyToMessage: 'Reply in thread',
+	reactToMessage: 'React to a message',
+};
+
+const CORE_OPERATIONS_PICKER = (CORE_OPERATIONS ?? []).map((op) => ({
+	...op,
+	action: PRIMARY_PICKER_ACTIONS[(op as { value: string }).value],
+}));
+
+const MORE_OPERATIONS: INodeProperties['options'] = [
+	{
+		name: 'Send Voice Note',
+		value: 'sendVoice',
+		description: 'Send an audio file as a voice note',
+	},
+	{
+		name: 'Show Typing',
+		value: 'sendTyping',
+		description: 'Show or hide the typing indicator',
+	},
+	{
+		name: 'Create Poll',
+		value: 'createPoll',
+		description: 'Send a poll with multiple choice options',
+	},
+	{
+		name: 'Share Contact Card',
+		value: 'shareContact',
+		description: 'Send a contact card',
+	},
+];
+
+/** Saved workflows may still use v1 operation values. */
+const OP_SEND = ['sendMessage', 'send'];
+const OP_ATTACHMENT = ['sendAttachment', 'sendVoice'];
+const OP_REPLY = ['replyToMessage', 'reply'];
+const OP_REACT = ['reactToMessage', 'react'];
+const OP_TARGET = ['replyToMessage', 'reactToMessage', 'reply', 'react'];
+const OP_WITH_FILE = [...OP_ATTACHMENT, ...OP_REPLY, 'send'];
+const OP_RECIPIENT = [
+	'sendMessage',
+	'sendAttachment',
+	'sendVoice',
+	'sendTyping',
+	'createPoll',
+	'shareContact',
+	'send',
+	'typing',
+];
+
+const LEGACY_SEND_FORMAT_OPTIONS: INodeProperties['options'] = [
 	{ name: 'Text', value: 'text' },
 	{ name: 'File', value: 'file' },
 	{ name: 'Poll', value: 'poll' },
 	{ name: 'Contact Card', value: 'contact' },
 ];
 
-const GROUP_OPERATION_OPTIONS: INodeProperties['options'] = [
-	{
-		name: 'Create Group Chat',
-		value: 'create',
-		description: 'Start a new iMessage group with two or more people',
-	},
-	{
-		name: 'Send Album',
-		value: 'sendAlbum',
-		description: 'Send multiple files as one visual group (e.g. photo album)',
-	},
-];
-
 export const spectrumProperties: INodeProperties[] = [
 	{
-		displayName: ACTION_QUICK_START,
-		name: 'quickStartNotice',
-		type: 'notice',
-		default: '',
+		displayName: 'Show Expert Options',
+		name: 'showExpertOptions',
+		type: 'boolean',
+		default: false,
+		description: 'Whether to show additional actions and parameters',
 	},
 	{
 		displayName: 'Action',
 		name: 'operation',
 		type: 'options',
 		noDataExpression: true,
-		options: [
-			{
-				name: 'Group',
-				value: 'group',
-				action: 'Create or message a group',
-				description: 'Create a group chat or send a file album',
-			},
-			{
-				name: 'React',
-				value: 'react',
-				action: 'React to a message',
-				description: 'IMessage tapback',
-			},
-			{
-				name: 'Reply',
-				value: 'reply',
-				action: 'Reply to a message',
-				description: 'Threaded reply — wire after Spectrum Trigger',
-			},
-			{
-				name: 'Send',
-				value: 'send',
-				action: 'Send a message',
-				description: 'Text, file, poll, or contact card',
-			},
-			{
-				name: 'Show Typing',
-				value: 'typing',
-				action: 'Show or hide typing indicator',
-				description: 'Show “typing…” before a slow reply',
-			},
-		],
-		default: 'send',
+		displayOptions: { show: { showExpertOptions: [false] } },
+		options: CORE_OPERATIONS_PICKER,
+		default: 'sendMessage',
 	},
 	{
-		displayName: ACTION_LINE_HINT,
-		name: 'lineRoutingNotice',
-		type: 'notice',
-		default: '',
-	},
-	{
-		displayName: 'Phone Routing',
-		name: 'phoneRouting',
+		displayName: 'Action',
+		name: 'operation',
 		type: 'options',
 		noDataExpression: true,
-		options: [
-			{
-				name: 'From Inbound Space',
-				value: 'fromInbound',
-				description: 'Use space.phone from the trigger ($JSON.phone)',
-			},
-			{
-				name: 'Select Line',
-				value: 'selectLine',
-				description: 'Pick a dedicated line from GET /projects/{ID}/lines/ (Business plan)',
-			},
-			{
-				name: 'Auto',
-				value: 'auto',
-				description: 'Omit phone — Spectrum picks (shared pool on Free/Pro, random dedicated line on Business)',
-			},
-			{
-				name: 'Expression',
-				value: 'expression',
-				description: 'Custom E.164 phone for im.space(user, { phone })',
-			},
-		],
-		default: 'fromInbound',
-	},
-	{
-		displayName: 'Phone',
-		name: 'phone',
-		type: 'string',
-		default: FROM_SPACE_PHONE,
-		placeholder: '={{ $json.phone }}',
-		description:
-			'Line phone for per-phone routing. After a trigger, leave as $JSON.phone so replies use the same line.',
-		displayOptions: { show: { phoneRouting: ['fromInbound'] } },
-	},
-	{
-		displayName: 'Line Name or ID',
-		name: 'phoneNumber',
-		type: 'options',
-		typeOptions: {
-			loadOptionsMethod: 'getProjectLines',
-		},
-		default: '',
-		description:
-			'Dedicated line from your project. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-		displayOptions: { show: { phoneRouting: ['selectLine'] } },
-	},
-	{
-		displayName: 'Phone',
-		name: 'phoneExpression',
-		type: 'string',
-		default: '',
-		placeholder: '={{ $json.phone }}',
-		description: 'E.164 phone passed to im.space(user, { phone })',
-		displayOptions: { show: { phoneRouting: ['expression'] } },
-	},
-	{
-		displayName: TO_IMESSAGE_SEND,
-		name: 'toImessageSendNotice',
-		type: 'notice',
-		default: '',
-		displayOptions: { show: { operation: ['send', 'typing', 'group'] } },
-	},
-	{
-		displayName: TO_IMESSAGE_REPLY,
-		name: 'toImessageReplyNotice',
-		type: 'notice',
-		default: '',
-		displayOptions: { show: { operation: ['reply', 'react'] } },
-	},
-	{
-		displayName: 'Group Operation',
-		name: 'groupOperation',
-		type: 'options',
-		noDataExpression: true,
-		options: GROUP_OPERATION_OPTIONS,
-		default: 'create',
-		displayOptions: { show: { operation: ['group'] } },
-	},
-	{
-		displayName: 'To',
-		name: 'recipients',
-		type: 'string',
-		required: true,
-		default: FROM_SENDER,
-		placeholder: '={{ $json.sender }}',
-		description:
-			`E.164 phone number only (e.g. +15551234567). Apple ID email is not supported for outbound yet. ${EMAIL_OUTBOUND_CONTACT_PLAIN}`,
-		displayOptions: {
-			show: {
-				operation: ['send', 'typing', 'group'],
-			},
-		},
+		displayOptions: { show: { showExpertOptions: [true] } },
+		options: [...(CORE_OPERATIONS ?? []), ...(MORE_OPERATIONS ?? [])],
+		default: 'sendMessage',
 	},
 	{
 		displayName: 'Message Format',
 		name: 'sendFormat',
 		type: 'options',
 		noDataExpression: true,
-		options: SEND_FORMAT_OPTIONS,
+		options: LEGACY_SEND_FORMAT_OPTIONS,
 		default: 'text',
 		displayOptions: { show: { operation: ['send'] } },
 	},
 	{
-		displayName: 'Message',
+		displayName: 'Recipients',
+		name: 'recipients',
+		type: 'string',
+		required: true,
+		default: FROM_SENDER,
+		placeholder: '={{ $json.sender }}',
+		description: PHONE_RECIPIENT_DESC,
+		displayOptions: { show: { operation: OP_RECIPIENT } },
+	},
+	{
+		displayName: 'Message Text',
 		name: 'text',
 		type: 'string',
 		typeOptions: { rows: 4 },
+		required: true,
 		default: '',
 		placeholder: 'Hello!',
-		description: 'Plain text. URLs can show an iMessage link preview when Link Preview is on.',
+		description: 'Text of the message to send',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['text'],
-			},
+			show: { operation: [...OP_SEND] },
+			hide: { operation: ['send'], sendFormat: ['file', 'poll', 'contact'] },
 		},
 	},
 	{
@@ -232,13 +178,10 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'linkPreview',
 		type: 'boolean',
 		default: true,
-		description:
-			'Whether iMessage should show a link preview for URLs in the message (enableLinkPreview)',
+		description: LINK_PREVIEW_DESC,
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['text'],
-			},
+			show: { operation: ['sendMessage', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['file', 'poll', 'contact'] },
 		},
 	},
 	{
@@ -247,54 +190,25 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'options',
 		options: EFFECT_OPTIONS,
 		default: 'none',
-		description: 'Bubble or screen effect (text sends only)',
+		description: 'Bubble or screen effect to apply to the message',
 		displayOptions: {
 			show: {
-				operation: ['send'],
-				sendFormat: ['text'],
+				showExpertOptions: [true],
+				operation: ['sendMessage', 'send'],
 			},
+			hide: { operation: ['send'], sendFormat: ['file', 'poll', 'contact'] },
 		},
 	},
 	{
-		displayName: 'Source',
-		name: 'attachmentSource',
-		type: 'options',
-		options: [
-			{ name: 'File Path', value: 'path' },
-			{ name: 'Binary Property', value: 'binary' },
-		],
-		default: 'path',
-		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['file'],
-			},
-		},
-	},
-	{
-		displayName: 'File Path',
+		displayName: 'Attachment File',
 		name: 'filePath',
 		type: 'string',
 		default: '',
+		placeholder: '/path/to/file.jpg',
+		description: 'File to send. Uses the file from the previous step if empty.',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['file'],
-				attachmentSource: ['path'],
-			},
-		},
-	},
-	{
-		displayName: 'Binary Property',
-		name: 'binaryProperty',
-		type: 'string',
-		default: 'data',
-		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['file'],
-				attachmentSource: ['binary'],
-			},
+			show: { operation: OP_WITH_FILE },
+			hide: { operation: ['send'], sendFormat: ['text', 'poll', 'contact'] },
 		},
 	},
 	{
@@ -302,23 +216,13 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'fileName',
 		type: 'string',
 		default: '',
+		description: 'Name shown to the recipient. Detected from the file if empty.',
 		displayOptions: {
 			show: {
-				operation: ['send'],
-				sendFormat: ['file'],
+				showExpertOptions: [true],
+				operation: OP_WITH_FILE,
 			},
-		},
-	},
-	{
-		displayName: 'MIME Type',
-		name: 'mimeType',
-		type: 'string',
-		default: '',
-		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['file'],
-			},
+			hide: { operation: ['send'], sendFormat: ['text', 'poll', 'contact'] },
 		},
 	},
 	{
@@ -326,8 +230,7 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'asVoiceNote',
 		type: 'boolean',
 		default: false,
-		description:
-			'Whether to deliver audio as an iMessage voice memo (waveform) instead of a file',
+		description: 'Whether to send audio as a voice note instead of a file attachment',
 		displayOptions: {
 			show: {
 				operation: ['send'],
@@ -340,11 +243,11 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'duration',
 		type: 'number',
 		default: 0,
+		description: 'Length of the voice note in seconds, used for the waveform display',
 		displayOptions: {
 			show: {
-				operation: ['send'],
-				sendFormat: ['file'],
-				asVoiceNote: [true],
+				showExpertOptions: [true],
+				operation: ['sendVoice'],
 			},
 		},
 	},
@@ -352,12 +255,13 @@ export const spectrumProperties: INodeProperties[] = [
 		displayName: 'Poll Title',
 		name: 'pollTitle',
 		type: 'string',
+		required: true,
 		default: '',
+		placeholder: 'Where should we eat?',
+		description: 'Title of the poll',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['poll'],
-			},
+			show: { operation: ['createPoll', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'contact'] },
 		},
 	},
 	{
@@ -366,12 +270,10 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		placeholder: 'Option 1, Option 2, Option 3',
-		description: 'Comma-separated (minimum 2). Poll replies are not in the trigger yet.',
+		description: 'Comma-separated list of at least two options',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['poll'],
-			},
+			show: { operation: ['createPoll', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'contact'] },
 		},
 	},
 	{
@@ -379,11 +281,10 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'contactFirst',
 		type: 'string',
 		default: '',
+		description: 'First name on the contact card',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['contact'],
-			},
+			show: { operation: ['shareContact', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
 	{
@@ -391,11 +292,10 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'contactLast',
 		type: 'string',
 		default: '',
+		description: 'Last name on the contact card',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['contact'],
-			},
+			show: { operation: ['shareContact', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
 	{
@@ -404,11 +304,10 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		placeholder: '+15551234567',
+		description: 'Phone numbers on the contact card, comma-separated',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['contact'],
-			},
+			show: { operation: ['shareContact', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
 	{
@@ -417,85 +316,10 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'string',
 		typeOptions: { rows: 4 },
 		default: '',
+		description: 'Full vCard data. Used instead of the name and phone fields when set.',
 		displayOptions: {
-			show: {
-				operation: ['send'],
-				sendFormat: ['contact'],
-			},
-		},
-	},
-	{
-		displayName: 'Welcome Message',
-		name: 'groupWelcomeMessage',
-		type: 'string',
-		typeOptions: { rows: 3 },
-		default: '',
-		placeholder: 'Welcome to the group!',
-		description: 'Optional first message after the group is created',
-		displayOptions: {
-			show: {
-				operation: ['group'],
-				groupOperation: ['create'],
-			},
-		},
-	},
-	{
-		displayName: 'Source',
-		name: 'groupAttachmentSource',
-		type: 'options',
-		options: [
-			{ name: 'File Paths', value: 'path' },
-			{ name: 'Binary Properties', value: 'binary' },
-		],
-		default: 'path',
-		displayOptions: {
-			show: {
-				operation: ['group'],
-				groupOperation: ['sendAlbum'],
-			},
-		},
-	},
-	{
-		displayName: 'File Paths',
-		name: 'groupFilePaths',
-		type: 'string',
-		default: '',
-		placeholder: '/path/a.jpg, /path/b.jpg',
-		description: 'Comma-separated paths (minimum 2 files)',
-		displayOptions: {
-			show: {
-				operation: ['group'],
-				groupOperation: ['sendAlbum'],
-				groupAttachmentSource: ['path'],
-			},
-		},
-	},
-	{
-		displayName: 'Binary Properties',
-		name: 'groupBinaryProperties',
-		type: 'string',
-		default: '',
-		placeholder: 'data, data2',
-		description: 'Comma-separated n8n binary property names (minimum 2 files)',
-		displayOptions: {
-			show: {
-				operation: ['group'],
-				groupOperation: ['sendAlbum'],
-				groupAttachmentSource: ['binary'],
-			},
-		},
-	},
-	{
-		displayName: 'Album Caption',
-		name: 'groupCaption',
-		type: 'string',
-		default: '',
-		description: 'Optional text sent with the album (one caption per group)',
-		displayOptions: {
-			show: {
-				operation: ['group'],
-				groupOperation: ['sendAlbum'],
-			},
+			show: { operation: ['shareContact', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
 	{
@@ -505,9 +329,8 @@ export const spectrumProperties: INodeProperties[] = [
 		required: true,
 		default: FROM_SENDER,
 		placeholder: '={{ $json.sender }}',
-		description:
-			`E.164 phone only (e.g. +15551234567). Must match whoever sent the inbound iMessage — email Apple IDs are not supported for outbound. ${EMAIL_OUTBOUND_CONTACT_PLAIN}`,
-		displayOptions: { show: { operation: ['reply', 'react'] } },
+		description: 'Phone number of the person in the conversation. ,.',
+		displayOptions: { show: { operation: OP_TARGET } },
 	},
 	{
 		displayName: 'Message ID',
@@ -516,8 +339,8 @@ export const spectrumProperties: INodeProperties[] = [
 		required: true,
 		default: FROM_MESSAGE_ID,
 		placeholder: '={{ $json.messageId }}',
-		description: 'From Spectrum Trigger output — the message to reply to or react to',
-		displayOptions: { show: { operation: ['reply', 'react'] } },
+		description: 'ID of the message to reply to or react to',
+		displayOptions: { show: { operation: OP_TARGET } },
 	},
 	{
 		displayName: 'Reply Text',
@@ -525,46 +348,39 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'string',
 		typeOptions: { rows: 3 },
 		default: FROM_TEXT,
-		displayOptions: { show: { operation: ['reply'] } },
+		placeholder: 'Thanks for your message!',
+		description: 'Text of the reply',
+		displayOptions: { show: { operation: OP_REPLY } },
 	},
 	{
 		displayName: 'Link Preview',
 		name: 'replyLinkPreview',
 		type: 'boolean',
 		default: true,
-		description: 'Whether iMessage should show a link preview for URLs in the reply text',
-		displayOptions: { show: { operation: ['reply'] } },
-	},
-	{
-		displayName: 'Reply Attachment Path',
-		name: 'replyAttachmentPath',
-		type: 'string',
-		default: '',
-		displayOptions: { show: { operation: ['reply'] } },
-	},
-	{
-		displayName: 'Reply Attachment Binary',
-		name: 'replyAttachmentBinary',
-		type: 'string',
-		default: '',
-		displayOptions: { show: { operation: ['reply'] } },
+		description: LINK_PREVIEW_DESC,
+		displayOptions: { show: { operation: OP_REPLY } },
 	},
 	{
 		displayName: 'Reaction',
 		name: 'reaction',
 		type: 'options',
 		options: REACTION_OPTIONS,
+		required: true,
 		default: 'love',
-		displayOptions: { show: { operation: ['react'] } },
+		description: 'Tapback to send',
+		displayOptions: { show: { operation: OP_REACT } },
 	},
 	{
 		displayName: 'Custom Reaction',
 		name: 'reactionCustom',
 		type: 'string',
+		required: true,
 		default: '',
+		placeholder: 'e.g. 🔥 or any emoji',
+		description: 'Emoji or text for the reaction',
 		displayOptions: {
 			show: {
-				operation: ['react'],
+				operation: OP_REACT,
 				reaction: ['__custom__'],
 			},
 		},
@@ -578,6 +394,39 @@ export const spectrumProperties: INodeProperties[] = [
 			{ name: 'Stop', value: 'stop' },
 		],
 		default: 'start',
-		displayOptions: { show: { operation: ['typing'] } },
+		description: 'Whether to start or stop showing typing',
+		displayOptions: { show: { operation: ['sendTyping', 'typing'] } },
+	},
+	{
+		displayName: 'Line',
+		name: 'phoneRouting',
+		type: 'options',
+		noDataExpression: true,
+		options: [
+			{
+				name: 'Auto',
+				value: 'auto',
+				description: 'Use the inbound line or the project default',
+			},
+			{
+				name: 'Dedicated Line',
+				value: 'dedicatedLine',
+				description: 'Send from a specific line in the project',
+			},
+		],
+		default: 'auto',
+		description: 'Which line to send from',
+	},
+	{
+		displayName: 'Send From Line Name or ID',
+		name: 'phoneNumber',
+		type: 'options',
+		typeOptions: {
+			loadOptionsMethod: 'getProjectLines',
+		},
+		default: '',
+		description:
+			'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		displayOptions: { show: { phoneRouting: ['dedicatedLine', 'selectLine'] } },
 	},
 ];

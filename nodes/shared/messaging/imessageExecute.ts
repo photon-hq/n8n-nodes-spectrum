@@ -6,9 +6,13 @@ import {
 	assertResolvedSpacePhone,
 	pollOptionsFromString,
 	readMessagingOptions,
+	resolveBinaryProperty,
+	resolveFilePath,
+	resolveOptionalAttachmentSource,
 	splitList,
 	type NodeMessagingOptions,
 } from './params';
+import { resolveAttachmentMeta } from './fileMeta';
 import { assertPhoneRecipient } from './recipients';
 import { resolveSpace, splitAddresses } from './resolveSpace';
 import type { SpectrumSession } from './spectrumClient';
@@ -28,6 +32,69 @@ function textContent(sp: SpectrumModule, message: string, linkPreview: boolean):
 
 function getSpacePhone(options: NodeMessagingOptions): string {
 	return options.phone?.trim() ?? '';
+}
+
+type FileBuilderKind = 'attachment' | 'voice';
+
+async function buildFileContent(
+	ctx: IExecuteFunctions,
+	sp: SpectrumModule,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+	kind: FileBuilderKind,
+): Promise<unknown> {
+	const source = resolveOptionalAttachmentSource(ctx, itemIndex, options);
+	if (!source) {
+		throw new NodeOperationError(
+			ctx.getNode(),
+			'No file to send. Provide an attachment file or pass one from the previous step',
+			{ itemIndex },
+		);
+	}
+
+	const builder = kind === 'voice' ? sp.voice : sp.attachment;
+	const filePath = resolveFilePath(options);
+
+	if (source === 'path') {
+		const meta: Record<string, unknown> = { ...resolveAttachmentMeta(filePath, options) };
+		if (kind === 'voice' && options.duration) meta.duration = options.duration;
+		return Object.keys(meta).length > 0
+			? (builder as (path: string, meta: unknown) => unknown)(filePath, meta)
+			: (builder as (path: string) => unknown)(filePath);
+	}
+
+	const property = resolveBinaryProperty(options);
+	const binary = await ctx.helpers.getBinaryDataBuffer(itemIndex, property);
+	const binaryMeta = ctx.helpers.assertBinaryData(itemIndex, property);
+	const meta: Record<string, unknown> = { ...resolveAttachmentMeta('', options, binaryMeta) };
+	if (kind === 'voice' && options.duration) meta.duration = options.duration;
+	return (builder as (buffer: Buffer, meta: unknown) => unknown)(binary, meta);
+}
+
+async function buildOptionalFileContent(
+	ctx: IExecuteFunctions,
+	sp: SpectrumModule,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): Promise<unknown | undefined> {
+	const source = resolveOptionalAttachmentSource(ctx, itemIndex, options);
+	if (!source) return undefined;
+
+	const filePath = resolveFilePath(options);
+	const builder = sp.attachment;
+
+	if (source === 'path') {
+		const meta: Record<string, unknown> = { ...resolveAttachmentMeta(filePath, options) };
+		return Object.keys(meta).length > 0
+			? builder(filePath, meta)
+			: builder(filePath);
+	}
+
+	const property = resolveBinaryProperty(options);
+	const binary = await ctx.helpers.getBinaryDataBuffer(itemIndex, property);
+	const binaryMeta = ctx.helpers.assertBinaryData(itemIndex, property);
+	const meta: Record<string, unknown> = { ...resolveAttachmentMeta('', options, binaryMeta) };
+	return builder(binary, meta);
 }
 
 export async function executeImessageOperation(
@@ -114,35 +181,9 @@ async function sendAttachmentOrVoice(
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
-	const source = options.attachmentSource ?? 'path';
 	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
-	const builder = operation === 'sendVoice' ? sp.voice : sp.attachment;
-
-	let content: unknown;
-	if (source === 'path') {
-		const filePath = options.filePath ?? '';
-		if (!filePath) {
-			throw new NodeOperationError(ctx.getNode(), 'File path is required', { itemIndex });
-		}
-		const meta: Record<string, unknown> = {};
-		if (options.fileName) meta.name = options.fileName;
-		if (options.mimeType) meta.mimeType = options.mimeType;
-		if (operation === 'sendVoice' && options.duration) meta.duration = options.duration;
-		content =
-			Object.keys(meta).length > 0
-				? (builder as (path: string, meta: unknown) => unknown)(filePath, meta)
-				: (builder as (path: string) => unknown)(filePath);
-	} else {
-		const property = options.binaryProperty ?? 'data';
-		const binary = await ctx.helpers.getBinaryDataBuffer(itemIndex, property);
-		const binaryMeta = ctx.helpers.assertBinaryData(itemIndex, property);
-		const meta: Record<string, unknown> = {
-			name: options.fileName || binaryMeta.fileName || 'file',
-			mimeType: options.mimeType || binaryMeta.mimeType,
-		};
-		if (operation === 'sendVoice' && options.duration) meta.duration = options.duration;
-		content = (builder as (buffer: Buffer, meta: unknown) => unknown)(binary, meta);
-	}
+	const kind: FileBuilderKind = operation === 'sendVoice' ? 'voice' : 'attachment';
+	const content = await buildFileContent(ctx, sp, itemIndex, options, kind);
 
 	const result = await space.send(content as Parameters<typeof space.send>[0]);
 	return { platform: 'imessage', spaceId: space.id, messageId: (result as { id?: string } | undefined)?.id };
@@ -157,28 +198,23 @@ async function replyToMessage(
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('targetRecipients', itemIndex) as string);
 	const targetId = ctx.getNodeParameter('targetMessageId', itemIndex) as string;
-	const replyText = ctx.getNodeParameter('replyText', itemIndex, '') as string;
+	const replyText = String(ctx.getNodeParameter('replyText', itemIndex, '')).trim();
 	const space = await resolveSpace(runtime, recipients, getSpacePhone(options), 'Conversation With');
 	const target = (await space.getMessage(targetId)) as Parameters<typeof sp.reply>[1];
 	const linkPreview = options.replyLinkPreview !== false;
 
 	const inner: unknown[] = [];
 	if (replyText) inner.push(textContent(sp, replyText, linkPreview));
-	if (options.replyAttachmentPath) inner.push(sp.attachment(options.replyAttachmentPath));
-	else if (options.replyAttachmentBinary) {
-		const binary = await ctx.helpers.getBinaryDataBuffer(itemIndex, options.replyAttachmentBinary);
-		const binaryMeta = ctx.helpers.assertBinaryData(itemIndex, options.replyAttachmentBinary);
-		inner.push(
-			sp.attachment(binary, {
-				name: binaryMeta.fileName || 'file',
-				mimeType: binaryMeta.mimeType,
-			}),
-		);
-	}
+
+	const attachment = await buildOptionalFileContent(ctx, sp, itemIndex, options);
+	if (attachment) inner.push(attachment);
+
 	if (inner.length === 0) {
-		throw new NodeOperationError(ctx.getNode(), 'Reply requires text or an attachment in Options', {
-			itemIndex,
-		});
+		throw new NodeOperationError(
+			ctx.getNode(),
+			'Reply requires text or a file',
+			{ itemIndex },
+		);
 	}
 
 	const wrapped = inner.map(

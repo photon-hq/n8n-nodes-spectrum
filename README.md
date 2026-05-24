@@ -8,14 +8,14 @@ n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). *
 
 | Node | What it does |
 |------|----------------|
-| **Spectrum Trigger** | Starts a workflow on inbound **iMessage text** |
-| **Spectrum** | **Send**, **Reply**, **React**, **Show Typing**, and **Group** on iMessage |
+| **Spectrum Trigger** | Starts a workflow on inbound **iMessage text** (default name: **On iMessage Event**) |
+| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React to a message**, and more via **Show Expert Options** |
 
 ## Getting started
 
 1. Set up your project at [app.photon.codes](https://app.photon.codes) and copy **Project ID** + **API Key**
 2. Install this package and add **Photon Spectrum Cloud API** credentials in n8n
-3. Add **Spectrum Trigger** → **Spectrum** → **Reply** — activate the workflow
+3. Add **Spectrum Trigger** → **Spectrum** → **Reply in thread** — activate the workflow
 
 Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) for a starter template.
 
@@ -23,11 +23,11 @@ Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) 
 
 | Action | What it does |
 |--------|----------------|
-| **Send** | Text (default), file, poll, or contact card — set **Message Format** on the node |
-| **Reply** | Threaded reply with optional attachment |
-| **React** | iMessage tapback |
-| **Show Typing** | Start or stop the typing indicator before a slow reply |
-| **Group** | Create a group chat or send multiple files as one album |
+| **Send a message** | Plain text with optional link preview |
+| **Send an attachment** | Photo, PDF, or other file — from the previous step or a saved file |
+| **Reply in thread** | Threaded reply — wire after **On iMessage Event** |
+| **React to a message** | iMessage tapback |
+| **Show Expert Options** | Voice notes, polls, contact cards, typing indicator, effects |
 
 **Link preview:** For text sends, enable **Link Preview** in Options — this turns on iMessage `enableLinkPreview` for URLs in the message (same path as [spectrum-ts rich links](https://photon.codes/docs/spectrum-ts/content#rich-links)).
 
@@ -37,7 +37,7 @@ Spectrum webhooks deliver **inbound text only** today. Photos, files, polls, and
 
 **Output:** `$json.text`, `$json.sender`, `$json.phone` (space line — same as `space.phone` in spectrum-ts), `$json.messageId`, `$json.platform`, `$json.spaceId`
 
-**Per-phone routing:** One workflow can handle every dedicated line on Business. Replies should use **Phone Routing → From Inbound Space** (default) so outbound uses `$json.phone`. Cold sends on dedicated lines: **Select Line**. Free/Pro shared pool: **Auto**.
+**Line routing:** Leave **Line → Auto** (default) for trigger → reply flows. Pick **Dedicated Line** for cold sends on a specific number.
 
 **Outbound:** Spectrum action nodes require **E.164 phone numbers** (`+15551234567`). Apple ID email is not supported for send/reply yet — contact [daniel@photon.codes](mailto:daniel@photon.codes) if you need that.
 

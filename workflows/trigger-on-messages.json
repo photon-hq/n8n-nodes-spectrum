@@ -7,7 +7,7 @@
 			"typeVersion": 1,
 			"position": [0, 0],
 			"id": "spectrum-trigger",
-			"name": "On Spectrum Message",
+			"name": "On iMessage Event",
 			"webhookId": "REPLACE_AFTER_ACTIVATION",
 			"credentials": {
 				"photonSpectrumCloudApi": {
@@ -18,9 +18,7 @@
 		},
 		{
 			"parameters": {
-				"operation": "reply",
-				"phoneRouting": "fromInbound",
-				"phone": "={{ $json.phone }}",
+				"operation": "replyToMessage",
 				"targetRecipients": "={{ $json.sender }}",
 				"targetMessageId": "={{ $json.messageId }}",
 				"replyText": "Thanks for your message!"
@@ -39,7 +37,7 @@
 		}
 	],
 	"connections": {
-		"On Spectrum Message": {
+		"On iMessage Event": {
 			"main": [
 				[
 					{

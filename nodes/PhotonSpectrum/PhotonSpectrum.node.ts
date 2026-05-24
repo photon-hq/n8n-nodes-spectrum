@@ -19,18 +19,18 @@ import { spectrumProperties } from './descriptions';
 import { executeOperation } from './operations/executeOperation';
 
 function buildSubtitleExpression(): string {
-	return `={{ ${JSON.stringify(SUBTITLE_BY_OPERATION)}[$parameter["operation"]] }}`;
+	return `={{ ${JSON.stringify(SUBTITLE_BY_OPERATION)}[$parameter["operation"]] || $parameter["operation"] || 'Send Message' }}`;
 }
 
 export class PhotonSpectrum implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Spectrum by Photon',
 		name: 'photonSpectrum',
-		icon: 'file:Dark.svg',
+		icon: 'file:spectrum.svg',
 		group: ['output'],
 		version: 1,
 		subtitle: buildSubtitleExpression(),
-		description: 'Send, reply, react, show typing, and manage groups on iMessage.',
+		description: 'Send and receive iMessage actions',
 		defaults: {
 			name: 'Spectrum by Photon',
 		},

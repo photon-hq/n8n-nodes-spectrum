@@ -9,14 +9,6 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
 
-import {
-	TRIGGER_LINE_HINT,
-	TRIGGER_QUICK_START,
-	TRIGGER_REPLY_HINT,
-	TRIGGER_SENDER_NOTE,
-	TRIGGER_WEBHOOK_HINT,
-	TRIGGER_WEBHOOK_SCOPE,
-} from '../shared/uxNotices';
 import { extractSpacePhone } from '../shared/spacePhone';
 import {
 	buildWebhookOutput,
@@ -67,14 +59,13 @@ export class PhotonSpectrumTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Spectrum by Photon Trigger',
 		name: 'photonSpectrumTrigger',
-		icon: 'file:Dark.svg',
+		icon: 'file:spectrum.svg',
 		group: ['trigger'],
 		version: 1,
 		subtitle: 'inbound text',
-		description:
-			'Starts your workflow when someone sends an iMessage text on Spectrum. Activating registers the webhook automatically.',
+		description: 'Runs when a text iMessage is received',
 		defaults: {
-			name: 'On Spectrum Message',
+			name: 'On iMessage Event',
 		},
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
@@ -95,42 +86,6 @@ export class PhotonSpectrumTrigger implements INodeType {
 		],
 		properties: [
 			{
-				displayName: TRIGGER_QUICK_START,
-				name: 'quickStartNotice',
-				type: 'notice',
-				default: '',
-			},
-			{
-				displayName: TRIGGER_LINE_HINT,
-				name: 'lineNotice',
-				type: 'notice',
-				default: '',
-			},
-			{
-				displayName: TRIGGER_REPLY_HINT,
-				name: 'replyNotice',
-				type: 'notice',
-				default: '',
-			},
-			{
-				displayName: TRIGGER_SENDER_NOTE,
-				name: 'senderPhoneNotice',
-				type: 'notice',
-				default: '',
-			},
-			{
-				displayName: TRIGGER_WEBHOOK_HINT,
-				name: 'webhookModeNotice',
-				type: 'notice',
-				default: '',
-			},
-			{
-				displayName: TRIGGER_WEBHOOK_SCOPE,
-				name: 'webhookScopeNotice',
-				type: 'notice',
-				default: '',
-			},
-			{
 				displayName: 'Advanced Options',
 				name: 'advancedOptions',
 				type: 'collection',
@@ -143,8 +98,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						type: 'string',
 						typeOptions: { password: true },
 						default: '',
-						description:
-							'Leave blank — saved automatically when you activate the workflow. Only change this if support asks you to.',
+						description: 'Signing secret for webhook verification. Set automatically when the workflow is activated.',
 					},
 				],
 			},
@@ -161,8 +115,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						type: 'string',
 						default: '',
 						placeholder: '+15551234567',
-						description:
-							'Only run when this line handled the conversation ($JSON.phone). Leave blank for all lines.',
+						description: 'Only trigger for messages on this line number. Leave empty for all lines.',
 					},
 					{
 						displayName: 'Sender Address',
@@ -170,8 +123,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						type: 'string',
 						default: '',
 						placeholder: '+15551234567',
-						description:
-							'Only run when this sender ID matches (phone or email as delivered in the webhook)',
+						description: 'Only trigger for messages from this sender',
 					},
 					{
 						displayName: 'Space ID',
@@ -179,7 +131,7 @@ export class PhotonSpectrumTrigger implements INodeType {
 						type: 'string',
 						default: '',
 						placeholder: 'any;-;+15551234567',
-						description: 'Advanced — only run in one specific conversation. Leave blank for all.',
+						description: 'Only trigger for this conversation ID',
 					},
 					{
 						displayName: 'Space Type',

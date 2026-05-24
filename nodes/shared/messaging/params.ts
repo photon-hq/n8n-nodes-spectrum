@@ -4,7 +4,10 @@ import { NodeOperationError } from 'n8n-workflow';
 import { assertOptionalPhone } from './recipients';
 import type { IMessageEffect } from './types';
 
-export type PhoneRouting = 'fromInbound' | 'selectLine' | 'auto' | 'expression';
+export type LineMode = 'auto' | 'dedicatedLine';
+
+/** @deprecated Legacy values still resolved at runtime for saved workflows. */
+export type PhoneRouting = LineMode | 'fromInbound' | 'selectLine' | 'expression';
 
 export interface NodeMessagingOptions {
 	effect?: IMessageEffect | 'none';
@@ -35,13 +38,9 @@ export interface NodeMessagingOptions {
 }
 
 export function resolveSpacePhone(ctx: IExecuteFunctions, itemIndex: number): string {
-	const routing = ctx.getNodeParameter('phoneRouting', itemIndex, 'fromInbound') as PhoneRouting;
+	const routing = ctx.getNodeParameter('phoneRouting', itemIndex, 'auto') as string;
 
-	if (routing === 'auto') {
-		return '';
-	}
-
-	if (routing === 'selectLine') {
+	if (routing === 'selectLine' || routing === 'dedicatedLine') {
 		return String(ctx.getNodeParameter('phoneNumber', itemIndex, '')).trim();
 	}
 
@@ -49,7 +48,20 @@ export function resolveSpacePhone(ctx: IExecuteFunctions, itemIndex: number): st
 		return String(ctx.getNodeParameter('phoneExpression', itemIndex, '')).trim();
 	}
 
-	return String(ctx.getNodeParameter('phone', itemIndex, '')).trim();
+	const triggerPhone = readTriggerPhone(ctx, itemIndex);
+	if (triggerPhone) return triggerPhone;
+
+	if (routing === 'fromInbound') {
+		return String(ctx.getNodeParameter('phone', itemIndex, '')).trim();
+	}
+
+	return '';
+}
+
+function readTriggerPhone(ctx: IExecuteFunctions, itemIndex: number): string {
+	const item = ctx.getInputData()[itemIndex]?.json ?? {};
+	const phone = item.phone;
+	return typeof phone === 'string' ? phone.trim() : '';
 }
 
 export function readMessagingOptions(
@@ -59,7 +71,7 @@ export function readMessagingOptions(
 	const phone = resolveSpacePhone(ctx, itemIndex);
 
 	return {
-		phoneRouting: ctx.getNodeParameter('phoneRouting', itemIndex, 'fromInbound') as PhoneRouting,
+		phoneRouting: ctx.getNodeParameter('phoneRouting', itemIndex, 'auto') as PhoneRouting,
 		phone,
 		effect: ctx.getNodeParameter('effect', itemIndex, 'none') as IMessageEffect | 'none',
 		attachmentSource: ctx.getNodeParameter('attachmentSource', itemIndex, 'path') as
@@ -100,12 +112,13 @@ export function assertResolvedSpacePhone(
 	itemIndex: number,
 	options: NodeMessagingOptions,
 ): void {
-	const routing = options.phoneRouting ?? 'fromInbound';
+	const routing = options.phoneRouting ?? 'auto';
 
-	if (routing === 'selectLine' && !options.phone) {
-		throw new NodeOperationError(ctx.getNode(), 'Select a line to send from', {
-			itemIndex,
-		});
+	if (
+		(routing === 'selectLine' || routing === 'dedicatedLine') &&
+		!options.phone
+	) {
+		throw new NodeOperationError(ctx.getNode(), 'Select a dedicated line', { itemIndex });
 	}
 
 	if (routing === 'expression' && !options.phone) {
@@ -134,4 +147,48 @@ export function splitList(raw: string | undefined): string[] {
 		.split(',')
 		.map((value) => value.trim())
 		.filter(Boolean);
+}
+
+export function resolveFilePath(options: NodeMessagingOptions): string {
+	return (options.filePath ?? options.replyAttachmentPath ?? '').trim();
+}
+
+export function resolveBinaryProperty(options: NodeMessagingOptions): string {
+	if (options.replyAttachmentBinary?.trim()) {
+		return options.replyAttachmentBinary.trim();
+	}
+	return (options.binaryProperty ?? 'data').trim() || 'data';
+}
+
+export function hasBinaryAttachment(
+	ctx: IExecuteFunctions,
+	itemIndex: number,
+	property: string,
+): boolean {
+	const name = property.trim() || 'data';
+	return Boolean(ctx.getInputData()[itemIndex]?.binary?.[name]);
+}
+
+/** Returns null when no file path or binary data is available. */
+export function resolveOptionalAttachmentSource(
+	ctx: IExecuteFunctions,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): 'path' | 'binary' | null {
+	const filePath = resolveFilePath(options);
+	if (filePath) return 'path';
+
+	const property = resolveBinaryProperty(options);
+	if (hasBinaryAttachment(ctx, itemIndex, property)) return 'binary';
+
+	return null;
+}
+
+/** Path wins when set; otherwise uses binary data on the incoming item. */
+export function resolveAttachmentSource(
+	ctx: IExecuteFunctions,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): 'path' | 'binary' {
+	return resolveOptionalAttachmentSource(ctx, itemIndex, options) ?? 'binary';
 }

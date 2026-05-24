@@ -1,7 +1,5 @@
 import { ApplicationError } from 'n8n-workflow';
 
-import { EMAIL_OUTBOUND_CONTACT_PLAIN } from '../uxNotices';
-
 /** E.164 — Spectrum iMessage outbound requires a leading country code. */
 const E164_PHONE = /^\+[1-9]\d{1,14}$/;
 
@@ -27,9 +25,7 @@ export function assertPhoneRecipient(address: string, fieldLabel: string): void 
 	}
 	if (looksLikeEmail(trimmed)) {
 		throw new ApplicationError(
-			`${fieldLabel} "${formatAddress(trimmed)}" is an email address. ` +
-				'Spectrum iMessage only supports phone numbers in E.164 format (e.g. +15551234567) right now — Apple ID email is not supported for outbound. ' +
-				EMAIL_OUTBOUND_CONTACT_PLAIN,
+			`${fieldLabel} "${formatAddress(trimmed)}" is an email address. Apple ID email is not supported — use a phone number in E.164 format (e.g. +15551234567).`,
 		);
 	}
 	if (!isE164Phone(trimmed)) {
