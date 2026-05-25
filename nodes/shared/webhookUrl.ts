@@ -8,7 +8,6 @@ export function isDevTunnelWebhookUrl(webhookUrl: string): boolean {
 		const { hostname } = new URL(webhookUrl);
 		const host = hostname.toLowerCase();
 		return (
-			host.endsWith('.trycloudflare.com') ||
 			host.endsWith('.ngrok-free.app') ||
 			host.endsWith('.ngrok.io') ||
 			host.endsWith('.ngrok-free.dev')

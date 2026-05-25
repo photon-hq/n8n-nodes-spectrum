@@ -16,11 +16,6 @@ const TRIGGER_DIST = path.join(
 	'PhotonSpectrumTrigger.node.js',
 );
 
-/**
- * Register this package the same way n8n loads published community nodes
- * (`n8n-nodes-spectrum.*`), not only via the CUSTOM loader used for raw files
- * under ~/.n8n/custom.
- */
 export function linkDevPackage(options = {}) {
 	const n8nUserFolder =
 		options.n8nUserFolder ??
@@ -57,16 +52,12 @@ export function linkDevPackage(options = {}) {
 
 	fs.symlinkSync(ROOT, communityLink, 'dir');
 
-	// n8n-node dev also symlinks here, which registers duplicate CUSTOM.* types.
-	// Drop our package from the CUSTOM loader so dev matches production node types.
 	if (fs.existsSync(customLink)) {
 		try {
 			if (fs.realpathSync(customLink) === fs.realpathSync(ROOT)) {
 				fs.unlinkSync(customLink);
 			}
-		} catch {
-			// ignore broken symlinks
-		}
+		} catch {}
 	}
 
 	return { n8nUserFolder, communityLink, reused: false };

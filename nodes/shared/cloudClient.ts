@@ -18,7 +18,6 @@ interface SpectrumEnvelope<T> {
 	data?: T;
 }
 
-/** Minimal Spectrum Cloud HTTP client — webhooks only (used by the trigger). */
 export function createSpectrumCloudClient(
 	credentials: PhotonSpectrumCloudApiCredentials,
 ) {

@@ -26,7 +26,6 @@ function appendQuery(urlString: string, qs?: PhotonRequestOptions['qs']): string
 	return url.toString();
 }
 
-/** HTTPS JSON via explicit IPv4 lookup (avoids broken IPv6 routes). */
 export async function photonHttpsJson<T>(
 	urlString: string,
 	options: PhotonRequestOptions = {},
@@ -150,7 +149,6 @@ function bodyToPayload(
 	return JSON.stringify(body);
 }
 
-/** fetch()-compatible helper that always resolves the host to IPv4. */
 export async function photonFetch(
 	urlString: string,
 	init: {
@@ -195,7 +193,6 @@ export async function photonFetch(
 
 let ipv4FetchInstalled = false;
 
-/** Route spectrum-ts through IPv4-only HTTPS. */
 export function installPhotonIpv4Fetch(): void {
 	if (ipv4FetchInstalled) return;
 	// eslint-disable-next-line @n8n/community-nodes/no-restricted-globals

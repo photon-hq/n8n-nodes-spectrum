@@ -54,28 +54,21 @@ const CORE_OPERATIONS: INodeProperties['options'] = [
 	},
 ];
 
-const PRIMARY_PICKER_ACTIONS: Record<string, string> = {
-	sendMessage: 'Send a message',
-	sendAttachment: 'Send an attachment',
-	replyToMessage: 'Reply in thread',
-	reactToMessage: 'React to a message',
-};
-
-const CORE_OPERATIONS_PICKER = (CORE_OPERATIONS ?? []).map((op) => ({
-	...op,
-	action: PRIMARY_PICKER_ACTIONS[(op as { value: string }).value],
-}));
-
-const MORE_OPERATIONS: INodeProperties['options'] = [
+const EXTENDED_OPERATIONS: INodeProperties['options'] = [
+	{
+		name: 'Send Rich Link',
+		value: 'sendRichLink',
+		description: 'Send a URL as a rich link card',
+	},
 	{
 		name: 'Send Voice Note',
 		value: 'sendVoice',
 		description: 'Send an audio file as a voice note',
 	},
 	{
-		name: 'Show Typing',
-		value: 'sendTyping',
-		description: 'Show or hide the typing indicator',
+		name: 'Edit Message',
+		value: 'editMessage',
+		description: 'Edit the text of a message you previously sent',
 	},
 	{
 		name: 'Create Poll',
@@ -87,24 +80,43 @@ const MORE_OPERATIONS: INodeProperties['options'] = [
 		value: 'shareContact',
 		description: 'Send a contact card',
 	},
+	{
+		name: 'Set Chat Background',
+		value: 'setBackground',
+		description: 'Set or clear the chat background image',
+	},
 ];
 
-/** Saved workflows may still use v1 operation values. */
+const PRIMARY_PICKER_ACTIONS: Record<string, string> = {
+	sendMessage: 'Send a message',
+	sendAttachment: 'Send an attachment',
+	replyToMessage: 'Reply in thread',
+	reactToMessage: 'React to a message',
+};
+
+const STANDARD_OPERATIONS = [...(CORE_OPERATIONS ?? []), ...(EXTENDED_OPERATIONS ?? [])];
+
+const STANDARD_OPERATIONS_PICKER = STANDARD_OPERATIONS.map((op) => ({
+	...op,
+	...(PRIMARY_PICKER_ACTIONS[(op as { value: string }).value]
+		? { action: PRIMARY_PICKER_ACTIONS[(op as { value: string }).value] }
+		: {}),
+}));
+
 const OP_SEND = ['sendMessage', 'send'];
-const OP_ATTACHMENT = ['sendAttachment', 'sendVoice'];
+const ATTACHMENT_OPERATIONS = ['sendAttachment', 'sendVoice'];
 const OP_REPLY = ['replyToMessage', 'reply'];
 const OP_REACT = ['reactToMessage', 'react'];
-const OP_TARGET = ['replyToMessage', 'reactToMessage', 'reply', 'react'];
-const OP_WITH_FILE = [...OP_ATTACHMENT, ...OP_REPLY, 'send'];
+const OP_TARGET = ['replyToMessage', 'editMessage', 'reactToMessage', 'reply', 'react'];
 const OP_RECIPIENT = [
 	'sendMessage',
 	'sendAttachment',
 	'sendVoice',
-	'sendTyping',
+	'sendRichLink',
 	'createPoll',
 	'shareContact',
+	'setBackground',
 	'send',
-	'typing',
 ];
 
 const LEGACY_SEND_FORMAT_OPTIONS: INodeProperties['options'] = [
@@ -120,24 +132,14 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'showExpertOptions',
 		type: 'boolean',
 		default: false,
-		description: 'Whether to show additional actions and parameters',
+		description: 'Whether to show message effects and optional reply attachments',
 	},
 	{
 		displayName: 'Action',
 		name: 'operation',
 		type: 'options',
 		noDataExpression: true,
-		displayOptions: { show: { showExpertOptions: [false] } },
-		options: CORE_OPERATIONS_PICKER,
-		default: 'sendMessage',
-	},
-	{
-		displayName: 'Action',
-		name: 'operation',
-		type: 'options',
-		noDataExpression: true,
-		displayOptions: { show: { showExpertOptions: [true] } },
-		options: [...(CORE_OPERATIONS ?? []), ...(MORE_OPERATIONS ?? [])],
+		options: STANDARD_OPERATIONS_PICKER,
 		default: 'sendMessage',
 	},
 	{
@@ -200,15 +202,70 @@ export const spectrumProperties: INodeProperties[] = [
 		},
 	},
 	{
+		displayName: 'URL',
+		name: 'url',
+		type: 'string',
+		required: true,
+		default: '',
+		placeholder: 'https://example.com/article',
+		displayOptions: { show: { operation: ['sendRichLink'] } },
+	},
+	{
 		displayName: 'Attachment File',
 		name: 'filePath',
 		type: 'string',
 		default: '',
 		placeholder: '/path/to/file.jpg',
-		description: 'File to send. Uses the file from the previous step if empty.',
+		description: 'File to send when using the legacy Send operation with File format',
 		displayOptions: {
-			show: { operation: OP_WITH_FILE },
-			hide: { operation: ['send'], sendFormat: ['text', 'poll', 'contact'] },
+			show: { operation: ['send'], sendFormat: ['file'] },
+		},
+	},
+	{
+		displayName: 'Source',
+		name: 'attachmentSource',
+		type: 'options',
+		options: [
+			{
+				name: 'Binary Property',
+				value: 'binary',
+				description: 'Use binary data on the incoming item',
+			},
+			{
+				name: 'File Path',
+				value: 'path',
+				description: 'Absolute file path readable by the n8n process',
+			},
+		],
+		default: 'path',
+		displayOptions: { show: { operation: ATTACHMENT_OPERATIONS } },
+	},
+	{
+		displayName: 'File Path',
+		name: 'filePath',
+		type: 'string',
+		required: true,
+		default: '',
+		placeholder: '/path/to/file.jpg',
+		displayOptions: {
+			show: {
+				operation: ATTACHMENT_OPERATIONS,
+				attachmentSource: ['path'],
+			},
+		},
+	},
+	{
+		displayName: 'Binary Property',
+		name: 'binaryProperty',
+		type: 'string',
+		required: true,
+		default: 'data',
+		description: 'Name of the binary property on the incoming item that holds the file',
+		displayOptions: {
+			show: {
+				operation: ATTACHMENT_OPERATIONS,
+				attachmentSource: ['binary'],
+			},
 		},
 	},
 	{
@@ -217,13 +274,15 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'string',
 		default: '',
 		description: 'Name shown to the recipient. Detected from the file if empty.',
-		displayOptions: {
-			show: {
-				showExpertOptions: [true],
-				operation: OP_WITH_FILE,
-			},
-			hide: { operation: ['send'], sendFormat: ['text', 'poll', 'contact'] },
-		},
+		displayOptions: { show: { operation: ATTACHMENT_OPERATIONS } },
+	},
+	{
+		displayName: 'MIME Type',
+		name: 'mimeType',
+		type: 'string',
+		default: '',
+		description: 'Override MIME type when it cannot be inferred automatically',
+		displayOptions: { show: { operation: ATTACHMENT_OPERATIONS } },
 	},
 	{
 		displayName: 'Send as Voice Note',
@@ -244,12 +303,7 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'number',
 		default: 0,
 		description: 'Length of the voice note in seconds, used for the waveform display',
-		displayOptions: {
-			show: {
-				showExpertOptions: [true],
-				operation: ['sendVoice'],
-			},
-		},
+		displayOptions: { show: { operation: ['sendVoice'] } },
 	},
 	{
 		displayName: 'Poll Title',
@@ -267,13 +321,58 @@ export const spectrumProperties: INodeProperties[] = [
 	{
 		displayName: 'Poll Options',
 		name: 'pollOptions',
-		type: 'string',
-		default: '',
-		placeholder: 'Option 1, Option 2, Option 3',
-		description: 'Comma-separated list of at least two options',
+		type: 'fixedCollection',
+		typeOptions: { multipleValues: true, sortable: true },
+		required: true,
+		default: { values: [{ option: '' }, { option: '' }] },
+		placeholder: 'Add Option',
 		displayOptions: {
 			show: { operation: ['createPoll', 'send'] },
 			hide: { operation: ['send'], sendFormat: ['text', 'file', 'contact'] },
+		},
+		options: [
+			{
+				displayName: 'Option',
+				name: 'values',
+				values: [
+					{
+						displayName: 'Option Text',
+						name: 'option',
+						type: 'string',
+						default: '',
+					},
+				],
+			},
+		],
+	},
+	{
+		displayName: 'Contact Source',
+		name: 'contactSource',
+		type: 'options',
+		options: [
+			{ name: 'Structured Fields', value: 'structured' },
+			{ name: 'vCard String', value: 'vcard' },
+		],
+		default: 'structured',
+		displayOptions: {
+			show: { operation: ['shareContact', 'send'] },
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
+		},
+	},
+	{
+		displayName: 'Contact vCard',
+		name: 'vcard',
+		type: 'string',
+		typeOptions: { rows: 6 },
+		default: '',
+		placeholder: 'BEGIN:VCARD…',
+		required: true,
+		displayOptions: {
+			show: {
+				operation: ['shareContact', 'send'],
+				contactSource: ['vcard'],
+			},
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
 	{
@@ -283,7 +382,10 @@ export const spectrumProperties: INodeProperties[] = [
 		default: '',
 		description: 'First name on the contact card',
 		displayOptions: {
-			show: { operation: ['shareContact', 'send'] },
+			show: {
+				operation: ['shareContact', 'send'],
+				contactSource: ['structured'],
+			},
 			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
@@ -294,7 +396,10 @@ export const spectrumProperties: INodeProperties[] = [
 		default: '',
 		description: 'Last name on the contact card',
 		displayOptions: {
-			show: { operation: ['shareContact', 'send'] },
+			show: {
+				operation: ['shareContact', 'send'],
+				contactSource: ['structured'],
+			},
 			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
@@ -303,23 +408,87 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'contactPhones',
 		type: 'string',
 		default: '',
-		placeholder: '+15551234567',
+		placeholder: '+15551234567, +15559876543',
 		description: 'Phone numbers on the contact card, comma-separated',
 		displayOptions: {
-			show: { operation: ['shareContact', 'send'] },
+			show: {
+				operation: ['shareContact', 'send'],
+				contactSource: ['structured'],
+			},
 			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
 		},
 	},
 	{
-		displayName: 'Contact vCard',
-		name: 'vcard',
+		displayName: 'Contact Emails',
+		name: 'contactEmails',
 		type: 'string',
-		typeOptions: { rows: 4 },
 		default: '',
-		description: 'Full vCard data. Used instead of the name and phone fields when set.',
+		placeholder: 'alice@example.com',
+		description: 'Email addresses on the contact card, comma-separated',
 		displayOptions: {
-			show: { operation: ['shareContact', 'send'] },
+			show: {
+				operation: ['shareContact', 'send'],
+				contactSource: ['structured'],
+			},
 			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
+		},
+	},
+	{
+		displayName: 'Contact Organization',
+		name: 'contactOrg',
+		type: 'string',
+		default: '',
+		description: 'Organization name on the contact card',
+		displayOptions: {
+			show: {
+				operation: ['shareContact', 'send'],
+				contactSource: ['structured'],
+			},
+			hide: { operation: ['send'], sendFormat: ['text', 'file', 'poll'] },
+		},
+	},
+	{
+		displayName: 'Background Source',
+		name: 'backgroundSource',
+		type: 'options',
+		options: [
+			{ name: 'Binary Property', value: 'binary' },
+			{ name: 'Clear', value: 'clear', description: 'Remove the current chat background' },
+			{ name: 'File Path', value: 'path' },
+		],
+		default: 'path',
+		displayOptions: { show: { operation: ['setBackground'] } },
+	},
+	{
+		displayName: 'Background File Path',
+		name: 'backgroundPath',
+		type: 'string',
+		default: '',
+		placeholder: '/path/to/wallpaper.jpg',
+		required: true,
+		displayOptions: {
+			show: { operation: ['setBackground'], backgroundSource: ['path'] },
+		},
+	},
+	{
+		displayName: 'Background Binary Property',
+		name: 'backgroundBinary',
+		type: 'string',
+		default: 'data',
+		required: true,
+		displayOptions: {
+			show: { operation: ['setBackground'], backgroundSource: ['binary'] },
+		},
+	},
+	{
+		displayName: 'Background MIME Type',
+		name: 'backgroundMime',
+		type: 'string',
+		default: '',
+		placeholder: 'image/jpeg',
+		description: 'Required when using a binary source',
+		displayOptions: {
+			show: { operation: ['setBackground'], backgroundSource: ['binary'] },
 		},
 	},
 	{
@@ -329,7 +498,7 @@ export const spectrumProperties: INodeProperties[] = [
 		required: true,
 		default: FROM_SENDER,
 		placeholder: '={{ $json.sender }}',
-		description: 'Phone number of the person in the conversation. ,.',
+		description: 'Phone number of the person in the conversation',
 		displayOptions: { show: { operation: OP_TARGET } },
 	},
 	{
@@ -339,7 +508,7 @@ export const spectrumProperties: INodeProperties[] = [
 		required: true,
 		default: FROM_MESSAGE_ID,
 		placeholder: '={{ $json.messageId }}',
-		description: 'ID of the message to reply to or react to',
+		description: 'ID of the message to reply to, react to, or edit',
 		displayOptions: { show: { operation: OP_TARGET } },
 	},
 	{
@@ -359,6 +528,36 @@ export const spectrumProperties: INodeProperties[] = [
 		default: true,
 		description: LINK_PREVIEW_DESC,
 		displayOptions: { show: { operation: OP_REPLY } },
+	},
+	{
+		displayName: 'Attachment File Path',
+		name: 'replyAttachmentPath',
+		type: 'string',
+		default: '',
+		description: 'Optional — reply with an attachment from a filesystem path',
+		displayOptions: {
+			show: { showExpertOptions: [true], operation: OP_REPLY },
+		},
+	},
+	{
+		displayName: 'Attachment Binary Property',
+		name: 'replyAttachmentBinary',
+		type: 'string',
+		default: '',
+		description: 'Optional — reply with an attachment from this binary property',
+		displayOptions: {
+			show: { showExpertOptions: [true], operation: OP_REPLY },
+		},
+	},
+	{
+		displayName: 'New Text',
+		name: 'editText',
+		type: 'string',
+		typeOptions: { rows: 3 },
+		required: true,
+		default: '',
+		description: 'Replacement text for the message',
+		displayOptions: { show: { operation: ['editMessage'] } },
 	},
 	{
 		displayName: 'Reaction',
@@ -384,18 +583,6 @@ export const spectrumProperties: INodeProperties[] = [
 				reaction: ['__custom__'],
 			},
 		},
-	},
-	{
-		displayName: 'Typing Indicator',
-		name: 'typingAction',
-		type: 'options',
-		options: [
-			{ name: 'Start', value: 'start' },
-			{ name: 'Stop', value: 'stop' },
-		],
-		default: 'start',
-		description: 'Whether to start or stop showing typing',
-		displayOptions: { show: { operation: ['sendTyping', 'typing'] } },
 	},
 	{
 		displayName: 'Line',

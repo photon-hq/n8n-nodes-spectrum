@@ -85,7 +85,6 @@ export class PhotonSpectrumCloudApi implements ICredentialType {
 		},
 	};
 
-	// Dashboard auth endpoint — same Basic credentials, avoids IPv6/runtime quirks in n8n's test HTTP client.
 	test: ICredentialTestRequest = {
 		request: {
 			url: CREDENTIAL_TEST_URL,

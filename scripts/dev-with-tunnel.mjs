@@ -19,9 +19,6 @@ const TRIGGER_DIST = path.join(
 	'PhotonSpectrumTrigger',
 	'PhotonSpectrumTrigger.node.js',
 );
-const TUNNEL_TARGET = `http://127.0.0.1:${N8N_PORT}`;
-const TUNNEL_MODE = (process.env.TUNNEL || 'auto').toLowerCase();
-const CLOUDFLARE_URL_RE = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i;
 const TUNNEL_TIMEOUT_MS = 90_000;
 const NGROK_API = 'http://127.0.0.1:4040/api/tunnels';
 
@@ -34,7 +31,6 @@ const RESET = '\x1b[0m';
 const children = [];
 let shuttingDown = false;
 let restartingN8n = false;
-let tunnelKind = 'unknown';
 let tscWatchProc = null;
 
 function findBin(name) {
@@ -54,9 +50,7 @@ function killPort(port) {
 	for (const pid of (r.stdout || '').trim().split('\n').filter(Boolean)) {
 		try {
 			process.kill(Number(pid), 'SIGTERM');
-		} catch {
-			// ignore
-		}
+		} catch {}
 	}
 }
 
@@ -72,9 +66,7 @@ function shutdown(code = 0) {
 		if (child.exitCode === null && !child.killed) {
 			try {
 				child.kill('SIGTERM');
-			} catch {
-				// ignore
-			}
+			} catch {}
 		}
 	}
 	setTimeout(() => process.exit(code), 300);
@@ -91,9 +83,7 @@ async function waitForN8nLocal() {
 		try {
 			const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
 			if (res.ok) return;
-		} catch {
-			// keep waiting
-		}
+		} catch {}
 		await sleep(1500);
 	}
 	throw new Error(`n8n did not become ready on port ${N8N_PORT} within ${TUNNEL_TIMEOUT_MS / 1000}s`);
@@ -107,40 +97,6 @@ async function verifyTunnelForwards(publicUrl) {
 			`Tunnel at ${publicUrl} is not reaching n8n (HTTP ${res.status}, body length ${body.length}).`,
 		);
 	}
-}
-
-function startCloudflared(bin) {
-	console.log(`${CYAN}▸${RESET} Starting cloudflared tunnel → ${TUNNEL_TARGET}`);
-	tunnelKind = 'cloudflared';
-	const proc = track(
-		spawn(bin, ['tunnel', '--url', TUNNEL_TARGET], {
-			stdio: ['ignore', 'pipe', 'pipe'],
-		}),
-	);
-	return new Promise((resolve, reject) => {
-		let settled = false;
-		const finish = (fn, value) => {
-			if (settled) return;
-			settled = true;
-			clearTimeout(timer);
-			fn(value);
-		};
-		const onData = (chunk) => {
-			const match = chunk.toString().match(CLOUDFLARE_URL_RE);
-			if (match) finish(resolve, { proc, publicUrl: match[0].replace(/\/+$/, '') });
-		};
-		proc.stdout.on('data', onData);
-		proc.stderr.on('data', onData);
-		proc.on('error', (err) => finish(reject, err));
-		proc.on('exit', (code) => {
-			if (!settled) {
-				finish(reject, new Error(`cloudflared exited before publishing a URL (code ${code ?? 'unknown'})`));
-			}
-		});
-		const timer = setTimeout(() => {
-			finish(reject, new Error(`Timed out waiting for trycloudflare.com URL`));
-		}, TUNNEL_TIMEOUT_MS);
-	});
 }
 
 async function readNgrokPublicUrl() {
@@ -277,9 +233,7 @@ async function restartN8nDev(devRef, previousUrl, newUrl, onDevExit) {
 		if (idx >= 0) children.splice(idx, 1);
 		try {
 			oldDev.kill('SIGTERM');
-		} catch {
-			// ignore
-		}
+		} catch {}
 		await sleep(2000);
 		if (portInUse(N8N_PORT)) {
 			killPort(N8N_PORT);
@@ -307,7 +261,6 @@ async function restartN8nDev(devRef, previousUrl, newUrl, onDevExit) {
 
 function startNgrok(bin) {
 	console.log(`${CYAN}▸${RESET} Starting ngrok tunnel → localhost:${N8N_PORT}`);
-	tunnelKind = 'ngrok';
 	const proc = track(
 		spawn(bin, ['http', N8N_PORT, '--log=stdout', '--log-format=json'], {
 			stdio: ['ignore', 'pipe', 'pipe'],
@@ -347,29 +300,12 @@ function startNgrok(bin) {
 
 async function startTunnel() {
 	const ngrokBin = findBin('ngrok');
-	const cloudflaredBin = findBin('cloudflared');
-	const preferNgrok = TUNNEL_MODE === 'ngrok' || TUNNEL_MODE === 'auto';
-	const preferCloudflared = TUNNEL_MODE === 'cloudflared';
-
-	if (preferNgrok && ngrokBin) {
-		try {
-			return await startNgrok(ngrokBin);
-		} catch (err) {
-			if (TUNNEL_MODE === 'ngrok' || !cloudflaredBin) throw err;
-			console.warn(`${YELLOW}!${RESET} ngrok failed (${(err instanceof Error ? err.message : err) || err}), trying cloudflared…`);
-		}
-	}
-
-	if ((preferCloudflared || TUNNEL_MODE === 'auto') && cloudflaredBin) {
-		return await startCloudflared(cloudflaredBin);
-	}
-
-	if (TUNNEL_MODE === 'ngrok') {
+	if (!ngrokBin) {
 		console.error(`${YELLOW}ngrok not found.${RESET} Install: brew install ngrok`);
-	} else {
-		console.error(`${YELLOW}No tunnel tool found.${RESET} Install ngrok (recommended): brew install ngrok`);
+		console.error(`${DIM}Then: ngrok config add-authtoken <token>${RESET}`);
+		process.exit(1);
 	}
-	process.exit(1);
+	return startNgrok(ngrokBin);
 }
 
 async function main() {
@@ -398,7 +334,7 @@ async function main() {
 		return;
 	}
 
-	console.log(`${CYAN}▸${RESET} Local dev detected — starting ngrok/cloudflared for Spectrum webhooks…`);
+	console.log(`${CYAN}▸${RESET} Local dev detected — starting ngrok for Spectrum webhooks…`);
 
 	let tunnelResult;
 	try {
@@ -412,7 +348,7 @@ async function main() {
 	const { proc: tunnelProc, publicUrl } = tunnelResult;
 
 	console.log('');
-	console.log(`${GREEN}Public webhook base URL${RESET} (${tunnelKind})`);
+	console.log(`${GREEN}Public webhook base URL${RESET} (ngrok)`);
 	console.log(`  ${publicUrl}`);
 	console.log(`${DIM}Editor (local only): http://localhost:${N8N_PORT}${RESET}`);
 	console.log('');
@@ -446,11 +382,9 @@ async function main() {
 		console.error(
 			`${YELLOW}Tunnel verification failed:${RESET} ${(err instanceof Error ? err.message : err) || err}`,
 		);
-		if (tunnelKind === 'cloudflared') {
-			console.error(
-				`${YELLOW}Tip:${RESET} trycloudflare is unreliable on some networks. Run: TUNNEL=ngrok npm run dev`,
-			);
-		}
+		console.error(
+			`${YELLOW}Tip:${RESET} ensure ngrok is authed: ngrok config add-authtoken <token>`,
+		);
 		shutdown(1);
 		return;
 	}
@@ -458,18 +392,16 @@ async function main() {
 	pollTimer = setInterval(async () => {
 		if (shuttingDown) return;
 
-		if (tunnelKind === 'ngrok') {
-			try {
-				const latest = await readNgrokPublicUrl();
-				if (latest !== currentPublicUrl) {
-					const previousUrl = currentPublicUrl;
-					currentPublicUrl = latest;
-					await restartN8nDev(devRef, previousUrl, latest, onDevExit);
-					return;
-				}
-			} catch {
-				console.warn(`${YELLOW}!${RESET} Could not read ngrok API — URL change detection paused briefly.`);
+		try {
+			const latest = await readNgrokPublicUrl();
+			if (latest !== currentPublicUrl) {
+				const previousUrl = currentPublicUrl;
+				currentPublicUrl = latest;
+				await restartN8nDev(devRef, previousUrl, latest, onDevExit);
+				return;
 			}
+		} catch {
+			console.warn(`${YELLOW}!${RESET} Could not read ngrok API — URL change detection paused briefly.`);
 		}
 
 		try {
@@ -485,7 +417,7 @@ async function main() {
 
 	tunnelProc.on('exit', (code) => {
 		if (shuttingDown) return;
-		console.warn(`${YELLOW}!${RESET} ${tunnelKind} exited (code ${code ?? 'unknown'})`);
+		console.warn(`${YELLOW}!${RESET} ngrok exited (code ${code ?? 'unknown'})`);
 		shutdown(code ?? 1);
 	});
 }

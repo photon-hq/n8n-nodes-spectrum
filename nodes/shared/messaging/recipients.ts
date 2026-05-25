@@ -1,6 +1,5 @@
 import { ApplicationError } from 'n8n-workflow';
 
-/** E.164 — Spectrum iMessage outbound requires a leading country code. */
 const E164_PHONE = /^\+[1-9]\d{1,14}$/;
 
 export function looksLikeEmail(address: string): boolean {

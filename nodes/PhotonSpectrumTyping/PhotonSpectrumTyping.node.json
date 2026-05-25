@@ -1,0 +1,22 @@
+{
+	"node": "n8n-nodes-spectrum.photonSpectrumTyping",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication"],
+	"alias": ["Spectrum", "Photon", "Typing", "Typing Indicator"],
+	"subcategories": {
+		"Communication": ["Messaging"]
+	},
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://docs.photon.codes/spectrum-ts/getting-started"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/photon-hq/n8n-nodes-spectrum#readme"
+			}
+		]
+	}
+}

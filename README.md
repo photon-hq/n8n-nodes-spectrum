@@ -9,7 +9,8 @@ n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). *
 | Node | What it does |
 |------|----------------|
 | **Spectrum Trigger** | Starts a workflow when an inbound **text message** is received (default name: **On Spectrum Message**) |
-| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React to a message**, and more via **Show Expert Options** |
+| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React**, **Voice note**, **Poll**, **Contact card** |
+| **Spectrum Typing Indicator** | Start or stop the typing indicator in a thread |
 
 ## Getting started
 
@@ -27,7 +28,15 @@ Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) 
 | **Send an attachment** | Photo, PDF, or other file — from the previous step or a saved file |
 | **Reply in thread** | Threaded reply to an inbound message |
 | **React to a message** | iMessage tapback |
-| **Show Expert Options** | Voice notes, polls, contact cards, typing indicator, effects |
+| **Send voice note** | Audio clip as a voice note (file path or binary) |
+| **Send rich link** | URL as an iMessage rich link card |
+| **Edit message** | Replace text on a message you sent |
+| **Create poll** | Poll with title and sortable options |
+| **Share contact card** | Structured fields or vCard |
+| **Set chat background** | Set, upload, or clear the thread background |
+| **Show Expert Options** | Message effects and optional reply attachments |
+
+**Spectrum Typing Indicator** node: start or stop typing in a thread.
 
 **Link preview:** For text sends, enable **Link Preview** in Options — this turns on iMessage `enableLinkPreview` for URLs in the message (same path as [spectrum-ts rich links](https://photon.codes/docs/spectrum-ts/content#rich-links)).
 
@@ -48,13 +57,13 @@ Spectrum webhooks deliver **inbound text only** today. Photos, files, polls, and
 ```bash
 npm install
 npm run build
-npm run dev          # local: auto-starts ngrok/cloudflared + sets WEBHOOK_URL
+npm run dev          # local: auto-starts ngrok + sets WEBHOOK_URL
 npm run dev:local    # local without tunnel (outbound action node only)
 ```
 
 **Local trigger testing:** `npm run dev` starts ngrok automatically. Toggle the workflow **Active** or click **Test this trigger**, then text your dedicated line.
 
-Install a tunnel tool if needed: `brew install ngrok` (recommended) or `brew install cloudflared`.
+Install ngrok if needed: `brew install ngrok` then `ngrok config add-authtoken <token>`.
 
 ### `Unrecognized node type: CUSTOM.photonSpectrumTrigger`
 

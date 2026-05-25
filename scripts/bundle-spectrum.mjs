@@ -13,6 +13,10 @@ const entryPoints = [
 		src: join(root, 'nodes', 'PhotonSpectrum', 'PhotonSpectrum.node.ts'),
 		out: join(dist, 'nodes', 'PhotonSpectrum', 'PhotonSpectrum.node.js'),
 	},
+	{
+		src: join(root, 'nodes', 'PhotonSpectrumTyping', 'PhotonSpectrumTyping.node.ts'),
+		out: join(dist, 'nodes', 'PhotonSpectrumTyping', 'PhotonSpectrumTyping.node.js'),
+	},
 ];
 
 const spectrumImportPlugin = {
@@ -86,4 +90,4 @@ for (const ep of entryPoints) {
 	await bundle(ep);
 	console.log(`bundled ${ep.out.replace(root + '/', '')}`);
 }
-console.log('spectrum-ts inlined into action node.');
+console.log('spectrum-ts inlined into action nodes.');

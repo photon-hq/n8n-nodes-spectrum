@@ -9,11 +9,14 @@ export type SpectrumOperation =
 	| 'sendMessage'
 	| 'sendAttachment'
 	| 'sendVoice'
+	| 'sendRichLink'
 	| 'replyToMessage'
+	| 'editMessage'
 	| 'reactToMessage'
 	| 'sendTyping'
 	| 'createPoll'
-	| 'shareContact';
+	| 'shareContact'
+	| 'setBackground';
 
 const GROUP_OPERATIONS = new Set(['createGroup', 'sendGroupAlbum', 'group']);
 
@@ -33,8 +36,14 @@ function resolveOperation(ctx: IExecuteFunctions, itemIndex: number): SpectrumOp
 	if (operation === 'sendMessage' || operation === 'sendAttachment') {
 		return operation;
 	}
+	if (operation === 'sendRichLink') {
+		return operation;
+	}
 	if (operation === 'replyToMessage' || operation === 'reply') {
 		return 'replyToMessage';
+	}
+	if (operation === 'editMessage') {
+		return operation;
 	}
 	if (operation === 'reactToMessage' || operation === 'react') {
 		return 'reactToMessage';
@@ -47,6 +56,12 @@ function resolveOperation(ctx: IExecuteFunctions, itemIndex: number): SpectrumOp
 	}
 	if (operation === 'shareContact') {
 		return 'shareContact';
+	}
+	if (operation === 'setBackground') {
+		return operation;
+	}
+	if (operation === 'sendVoice') {
+		return operation;
 	}
 
 	if (operation === 'send') {
@@ -82,17 +97,26 @@ export async function executeMessagingOperation(
 		return executeImessageOperation(ctx, session, operation, itemIndex, options);
 	}
 
+	if (operation === 'sendRichLink') {
+		if (!String(ctx.getNodeParameter('url', itemIndex, '')).trim()) {
+			throw new NodeOperationError(ctx.getNode(), 'URL is required', { itemIndex });
+		}
+		return executeImessageOperation(ctx, session, operation, itemIndex, options);
+	}
+
 	if (operation === 'createPoll') {
 		const title = ctx.getNodeParameter('pollTitle', itemIndex, '') as string;
 		if (!title.trim()) {
 			throw new NodeOperationError(ctx.getNode(), 'Poll title is required', { itemIndex });
 		}
-		options.pollTitle = title;
-		options.pollOptions = ctx.getNodeParameter('pollOptions', itemIndex, '') as string;
 		return executeImessageOperation(ctx, session, operation, itemIndex, options);
 	}
 
 	if (operation === 'shareContact') {
+		return executeImessageOperation(ctx, session, operation, itemIndex, options);
+	}
+
+	if (operation === 'setBackground') {
 		return executeImessageOperation(ctx, session, operation, itemIndex, options);
 	}
 
@@ -105,6 +129,13 @@ export async function executeMessagingOperation(
 				'Reply requires text or a file',
 				{ itemIndex },
 			);
+		}
+		return executeImessageOperation(ctx, session, operation, itemIndex, options);
+	}
+
+	if (operation === 'editMessage') {
+		if (!String(ctx.getNodeParameter('editText', itemIndex, '')).trim()) {
+			throw new NodeOperationError(ctx.getNode(), 'New text is required', { itemIndex });
 		}
 		return executeImessageOperation(ctx, session, operation, itemIndex, options);
 	}

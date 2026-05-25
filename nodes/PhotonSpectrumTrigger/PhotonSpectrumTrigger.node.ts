@@ -25,7 +25,6 @@ import {
 } from '../shared/webhookApi';
 import { assertPublicWebhookUrl, isLocalWebhookUrl } from '../shared/webhookUrl';
 
-/** @deprecated Saved workflows may still have filter params — read at runtime only. */
 type TriggerFilters = {
 	senderAddress?: string;
 	spaceType?: 'any' | 'dm' | 'group';
@@ -48,8 +47,8 @@ async function readRawBody(
 	if (!req.rawBody && typeof req.readRawBody === 'function') {
 		try {
 			await req.readRawBody();
-		} catch {
-			// ignore
+		} catch (error) {
+			void error;
 		}
 	}
 	const rawBody = (req.rawBody ?? '').toString();

@@ -25,12 +25,10 @@ let cachedSpectrum: SpectrumModule | undefined;
 let cachedImessage: ImessageProviderModule | undefined;
 
 async function importSpectrum(): Promise<SpectrumModule> {
-	// SPECTRUM_TS_IMPORT
 	return (await (0, eval)('import("spectrum-ts")')) as SpectrumModule;
 }
 
 async function importImessage(): Promise<ImessageProviderModule> {
-	// SPECTRUM_TS_IMESSAGE_IMPORT
 	return (await (0, eval)(
 		'import("spectrum-ts/providers/imessage")',
 	)) as ImessageProviderModule;

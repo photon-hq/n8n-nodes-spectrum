@@ -52,7 +52,8 @@
     ],
     "nodes": [
       "dist/nodes/PhotonSpectrum/PhotonSpectrum.node.js",
-      "dist/nodes/PhotonSpectrumTrigger/PhotonSpectrumTrigger.node.js"
+      "dist/nodes/PhotonSpectrumTrigger/PhotonSpectrumTrigger.node.js",
+      "dist/nodes/PhotonSpectrumTyping/PhotonSpectrumTyping.node.js"
     ]
   },
   "devDependencies": {

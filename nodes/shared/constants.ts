@@ -5,12 +5,14 @@ export const OPERATION_LABELS: Record<string, string> = {
 	sendAttachment: 'Send Attachment',
 	replyToMessage: 'Reply',
 	reactToMessage: 'React',
-	sendTyping: 'Show Typing',
+	sendRichLink: 'Send Rich Link',
+	sendVoice: 'Send Voice Note',
+	editMessage: 'Edit Message',
 	createPoll: 'Create Poll',
 	shareContact: 'Share Contact Card',
+	setBackground: 'Set Chat Background',
 };
 
-/** @deprecated Legacy operation values from saved workflows */
 export const LEGACY_OPERATION_LABELS: Record<string, string> = {
 	send: 'Send',
 	reply: 'Reply',

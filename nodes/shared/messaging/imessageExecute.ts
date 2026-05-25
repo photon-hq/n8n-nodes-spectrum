@@ -4,8 +4,9 @@ import { NodeOperationError } from 'n8n-workflow';
 import { resolveEffect } from './effects';
 import {
 	assertResolvedSpacePhone,
-	pollOptionsFromString,
+	pollOptionsFromParameter,
 	readMessagingOptions,
+	resolveAttachmentSource,
 	resolveBinaryProperty,
 	resolveFilePath,
 	resolveOptionalAttachmentSource,
@@ -20,7 +21,6 @@ import type { IMessageEffect } from './types';
 
 type SpectrumModule = SpectrumSession['sp'];
 
-/** iMessage sendText enableLinkPreview — spectrum-ts richlink path uses this internally. */
 function textContent(sp: SpectrumModule, message: string, linkPreview: boolean): unknown {
 	if (!linkPreview) {
 		return sp.text(message);
@@ -43,15 +43,7 @@ async function buildFileContent(
 	options: NodeMessagingOptions,
 	kind: FileBuilderKind,
 ): Promise<unknown> {
-	const source = resolveOptionalAttachmentSource(ctx, itemIndex, options);
-	if (!source) {
-		throw new NodeOperationError(
-			ctx.getNode(),
-			'No file to send. Provide an attachment file or pass one from the previous step',
-			{ itemIndex },
-		);
-	}
-
+	const source = resolveAttachmentSource(ctx, itemIndex, options);
 	const builder = kind === 'voice' ? sp.voice : sp.attachment;
 	const filePath = resolveFilePath(options);
 
@@ -118,8 +110,12 @@ export async function executeImessageOperation(
 		case 'sendAttachment':
 		case 'sendVoice':
 			return sendAttachmentOrVoice(ctx, runtime, sp, operation, itemIndex, options);
+		case 'sendRichLink':
+			return sendRichLink(ctx, runtime, sp, itemIndex, options);
 		case 'replyToMessage':
 			return replyToMessage(ctx, runtime, sp, itemIndex, options);
+		case 'editMessage':
+			return editMessage(ctx, runtime, sp, itemIndex, options);
 		case 'reactToMessage':
 			return reactToMessage(ctx, runtime, itemIndex, options);
 		case 'sendCustom':
@@ -130,6 +126,8 @@ export async function executeImessageOperation(
 			return shareContact(ctx, runtime, sp, itemIndex, options);
 		case 'sendTyping':
 			return sendTyping(ctx, runtime, sp, itemIndex, options);
+		case 'setBackground':
+			return setBackground(ctx, session, itemIndex, options);
 		case 'createGroup':
 			return createGroup(ctx, runtime, sp, itemIndex, options);
 		case 'sendGroupAlbum':
@@ -158,7 +156,8 @@ async function sendMessage(
 	const linkPreview = options.linkPreview !== false;
 
 	let content: unknown = textContent(sp, message, linkPreview);
-	const effect = (options.effect ?? 'none') as IMessageEffect;
+	const expert = ctx.getNodeParameter('showExpertOptions', itemIndex, false) as boolean;
+	const effect = expert ? ((options.effect ?? 'none') as IMessageEffect) : 'none';
 	if (effect && effect !== 'none') {
 		const effectValue = resolveEffect(imessageModule.imessage, effect, ctx.logger);
 		if (effectValue) content = effectBuilder(content, effectValue);
@@ -187,6 +186,36 @@ async function sendAttachmentOrVoice(
 
 	const result = await space.send(content as Parameters<typeof space.send>[0]);
 	return { platform: 'imessage', spaceId: space.id, messageId: (result as { id?: string } | undefined)?.id };
+}
+
+async function sendRichLink(
+	ctx: IExecuteFunctions,
+	runtime: SpectrumSession['runtime'],
+	sp: SpectrumModule,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): Promise<IDataObject> {
+	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
+	const url = ctx.getNodeParameter('url', itemIndex) as string;
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
+	const result = await space.send(sp.richlink(url) as Parameters<typeof space.send>[0]);
+	return { platform: 'imessage', spaceId: space.id, messageId: (result as { id?: string } | undefined)?.id };
+}
+
+async function editMessage(
+	ctx: IExecuteFunctions,
+	runtime: SpectrumSession['runtime'],
+	sp: SpectrumModule,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): Promise<IDataObject> {
+	const recipients = splitAddresses(ctx.getNodeParameter('targetRecipients', itemIndex) as string);
+	const targetId = ctx.getNodeParameter('targetMessageId', itemIndex) as string;
+	const newText = ctx.getNodeParameter('editText', itemIndex) as string;
+	const space = await resolveSpace(runtime, recipients, getSpacePhone(options), 'Conversation With');
+	const target = (await space.getMessage(targetId)) as Parameters<typeof sp.edit>[1];
+	await space.send(sp.edit(sp.text(newText), target) as Parameters<typeof space.send>[0]);
+	return { platform: 'imessage', spaceId: space.id, editedId: targetId };
 }
 
 async function replyToMessage(
@@ -260,7 +289,8 @@ async function sendTyping(
 	options: NodeMessagingOptions,
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
-	const typingAction = ctx.getNodeParameter('typingAction', itemIndex, 'start') as 'start' | 'stop';
+	const typingAction = (options.typingAction ??
+		ctx.getNodeParameter('typingAction', itemIndex, 'start')) as 'start' | 'stop';
 	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
 	await space.send(sp.typing(typingAction) as Parameters<typeof space.send>[0]);
 	return {
@@ -390,11 +420,11 @@ async function createPoll(
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
 	const title = options.pollTitle ?? '';
-	const pollOptions = pollOptionsFromString(options.pollOptions).map((row) => row.option);
+	const pollOptions = pollOptionsFromParameter(ctx, itemIndex);
 	if (!title || pollOptions.length < 2) {
 		throw new NodeOperationError(
 			ctx.getNode(),
-			'Poll title and at least 2 comma-separated options are required',
+			'Poll title and at least 2 options are required',
 			{ itemIndex },
 		);
 	}
@@ -422,10 +452,15 @@ async function shareContact(
 ): Promise<IDataObject> {
 	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
 	const space = await resolveSpace(runtime, recipients, getSpacePhone(options));
+	const source = options.contactSource ?? 'structured';
 
 	let contactContent: unknown;
-	if (options.vcard?.trim()) {
-		contactContent = sp.contact(options.vcard);
+	if (source === 'vcard') {
+		const vcard = options.vcard?.trim();
+		if (!vcard) {
+			throw new NodeOperationError(ctx.getNode(), 'vCard is required', { itemIndex });
+		}
+		contactContent = sp.contact(vcard);
 	} else {
 		const phones = (options.contactPhones ?? '')
 			.split(',')
@@ -434,7 +469,13 @@ async function shareContact(
 		for (const phone of phones) {
 			assertPhoneRecipient(phone, 'Contact Phones');
 		}
+		const emails = (options.contactEmails ?? '')
+			.split(',')
+			.map((value) => value.trim())
+			.filter(Boolean);
 		const phoneEntries = phones.map((value) => ({ value }));
+		const emailEntries = emails.map((value) => ({ value }));
+		const orgName = options.contactOrg?.trim();
 		const input: Record<string, unknown> = {
 			name: {
 				first: options.contactFirst || undefined,
@@ -442,9 +483,66 @@ async function shareContact(
 			},
 		};
 		if (phoneEntries.length > 0) input.phones = phoneEntries;
+		if (emailEntries.length > 0) input.emails = emailEntries;
+		if (orgName) input.org = { name: orgName };
 		contactContent = (sp.contact as (input: unknown) => unknown)(input);
 	}
 
 	const result = await space.send(contactContent as Parameters<typeof space.send>[0]);
 	return { platform: 'imessage', spaceId: space.id, messageId: (result as { id?: string } | undefined)?.id };
+}
+
+async function setBackground(
+	ctx: IExecuteFunctions,
+	session: SpectrumSession,
+	itemIndex: number,
+	options: NodeMessagingOptions,
+): Promise<IDataObject> {
+	const backgroundBuilder = session.background;
+	if (!backgroundBuilder) {
+		throw new NodeOperationError(ctx.getNode(), 'Background builder is not loaded', { itemIndex });
+	}
+
+	const recipients = splitAddresses(ctx.getNodeParameter('recipients', itemIndex) as string);
+	const space = await resolveSpace(session.runtime, recipients, getSpacePhone(options));
+	const source = ctx.getNodeParameter('backgroundSource', itemIndex, 'path') as
+		| 'path'
+		| 'binary'
+		| 'clear';
+
+	if (source === 'clear') {
+		await space.send(backgroundBuilder('clear') as Parameters<typeof space.send>[0]);
+		return withBackgroundMeta({ platform: 'imessage', spaceId: space.id, background: 'clear' }, space);
+	}
+
+	if (source === 'path') {
+		const path = ctx.getNodeParameter('backgroundPath', itemIndex, '') as string;
+		if (!path.trim()) {
+			throw new NodeOperationError(ctx.getNode(), 'Background file path is required', { itemIndex });
+		}
+		await space.send(backgroundBuilder(path) as Parameters<typeof space.send>[0]);
+		return withBackgroundMeta(
+			{ platform: 'imessage', spaceId: space.id, background: 'set', source: path },
+			space,
+		);
+	}
+
+	const property = ctx.getNodeParameter('backgroundBinary', itemIndex, 'data') as string;
+	const mime = ctx.getNodeParameter('backgroundMime', itemIndex, '') as string;
+	const binary = await ctx.helpers.getBinaryDataBuffer(itemIndex, property);
+	const binaryMeta = ctx.helpers.assertBinaryData(itemIndex, property);
+	await space.send(
+		backgroundBuilder(binary, { mimeType: mime || binaryMeta.mimeType }) as Parameters<
+			typeof space.send
+		>[0],
+	);
+	return withBackgroundMeta(
+		{ platform: 'imessage', spaceId: space.id, background: 'set', source: 'binary' },
+		space,
+	);
+}
+
+function withBackgroundMeta(result: IDataObject, space: { phone?: string }): IDataObject {
+	const linePhone = space.phone && space.phone !== 'shared' ? space.phone : undefined;
+	return linePhone ? { ...result, linePhone } : result;
 }
