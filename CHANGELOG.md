@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.0.2
+
+- Align README typing indicator docs with other Spectrum actions
+
 ## 1.0.1
 
 - Move Start Typing and Stop Typing into the main Spectrum action node; remove separate Typing Indicator node

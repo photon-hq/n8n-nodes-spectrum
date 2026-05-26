@@ -9,7 +9,7 @@ n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). *
 | Node | What it does |
 |------|----------------|
 | **Spectrum Trigger** | Starts a workflow when an inbound **text message** is received (default name: **On Spectrum Message**) |
-| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React**, **Start typing**, **Stop typing**, **Voice note**, **Poll**, **Contact card** |
+| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React to a message**, **Start typing indicator**, **Stop typing indicator**, **Send voice note**, **Send rich link**, **Edit message**, **Create poll**, **Share contact card**, **Set chat background** |
 
 ## Getting started
 
@@ -44,15 +44,17 @@ Set `N8N_COMMUNITY_PACKAGES` or use the Community Nodes UI so n8n loads the pack
 | **Send an attachment** | Photo, PDF, or other file - from the previous step or a saved file |
 | **Reply in thread** | Threaded reply to an inbound message |
 | **React to a message** | iMessage tapback |
+| **Start typing indicator** | Show the typing indicator in a thread (same Action menu as Send Message) |
+| **Stop typing indicator** | Hide the typing indicator in a thread |
 | **Send voice note** | Audio clip as a voice note (file path or binary) |
 | **Send rich link** | URL as an iMessage rich link card |
 | **Edit message** | Replace text on a message you sent |
 | **Create poll** | Poll with title and sortable options |
 | **Share contact card** | Structured fields or vCard |
 | **Set chat background** | Set, upload, or clear the thread background |
-| **Start typing** | Show the typing indicator in a thread |
-| **Stop typing** | Hide the typing indicator in a thread |
 | **Show Expert Options** | Message effects and optional reply attachments |
+
+Typing uses the same **Recipients** and **Line** fields as Send Message and Reply. Pick **Start typing indicator** before a send step, then **Stop typing indicator** when you are done (or let the send clear it).
 
 **Link preview:** For text sends, enable **Link Preview** in Options - this turns on iMessage `enableLinkPreview` for URLs in the message (same path as [spectrum-ts rich links](https://photon.codes/docs/spectrum-ts/content#rich-links)).
 
