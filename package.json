@@ -37,6 +37,8 @@
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
     "scan": "n8n-node build && node scripts/prune-dist.mjs && node scripts/scan-local.mjs",
+    "verify": "npm run lint && npm run build && npm run scan && node scripts/verify-english.mjs",
+    "verify:english": "node scripts/verify-english.mjs",
     "release": "n8n-node release",
     "prepublishOnly": "node scripts/generate-shrinkwrap.mjs && n8n-node prerelease"
   },
