@@ -51,7 +51,7 @@ export function assertPublicWebhookUrl(node: INode, webhookUrl: string): void {
 	if (!isLocalWebhookUrl(webhookUrl)) return;
 
 	throw new NodeApiError(node, {
-		message: `Cannot register webhook for ${webhookUrl} — Spectrum cannot reach localhost or private URLs.`,
+		message: `Cannot register webhook for ${webhookUrl} - Spectrum cannot reach localhost or private URLs.`,
 		description: PUBLIC_WEBHOOK_HELP,
 	});
 }

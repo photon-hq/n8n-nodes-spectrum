@@ -1,8 +1,4 @@
-import { installPhotonIpv4Fetch } from '../photonHttp';
-
 import type { MessagingPlatform, SpectrumCredentials } from './types';
-
-installPhotonIpv4Fetch();
 
 type SpectrumModule = typeof import('spectrum-ts');
 

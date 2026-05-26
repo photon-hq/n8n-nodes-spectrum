@@ -130,7 +130,7 @@ export function assertResolvedSpacePhone(
 	if (routing === 'expression' && !options.phone) {
 		throw new NodeOperationError(
 			ctx.getNode(),
-			'Phone expression resolved to empty — set phone or switch routing mode',
+			'Phone expression resolved to empty - set phone or switch routing mode',
 			{ itemIndex },
 		);
 	}

@@ -365,7 +365,7 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'string',
 		typeOptions: { rows: 6 },
 		default: '',
-		placeholder: 'BEGIN:VCARD…',
+		placeholder: 'BEGIN:VCARD...',
 		required: true,
 		displayOptions: {
 			show: {
@@ -534,7 +534,7 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'replyAttachmentPath',
 		type: 'string',
 		default: '',
-		description: 'Optional — reply with an attachment from a filesystem path',
+		description: 'Optional - reply with an attachment from a filesystem path',
 		displayOptions: {
 			show: { showExpertOptions: [true], operation: OP_REPLY },
 		},
@@ -544,7 +544,7 @@ export const spectrumProperties: INodeProperties[] = [
 		name: 'replyAttachmentBinary',
 		type: 'string',
 		default: '',
-		description: 'Optional — reply with an attachment from this binary property',
+		description: 'Optional - reply with an attachment from this binary property',
 		displayOptions: {
 			show: { showExpertOptions: [true], operation: OP_REPLY },
 		},

@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-spectrum",
   "version": "1.0.0",
-  "description": "n8n community node for Photon Spectrum — inbound text webhooks and iMessage send/reply/react/typing/group",
+  "description": "n8n community node for Photon Spectrum - inbound text webhooks and iMessage send/reply/react/typing/group",
   "license": "MIT",
   "keywords": [
     "n8n-community-node-package",
@@ -29,16 +29,16 @@
     "node": ">=20.15.0"
   },
   "scripts": {
-    "build": "n8n-node build && node scripts/bundle-spectrum.mjs",
+    "build": "n8n-node build && node scripts/bundle-spectrum.mjs && node scripts/prune-dist.mjs",
     "dev": "node scripts/dev-with-tunnel.mjs",
     "dev:local": "NO_TUNNEL=1 node scripts/dev-with-tunnel.mjs",
     "dev:tunnel": "node scripts/dev-with-tunnel.mjs",
     "link:dev": "node scripts/link-dev-package.mjs",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
-    "scan": "n8n-node build && node scripts/scan-local.mjs",
+    "scan": "n8n-node build && node scripts/prune-dist.mjs && node scripts/scan-local.mjs",
     "release": "n8n-node release",
-    "prepublishOnly": "n8n-node prerelease"
+    "prepublishOnly": "node scripts/generate-shrinkwrap.mjs && n8n-node prerelease"
   },
   "files": [
     "dist",

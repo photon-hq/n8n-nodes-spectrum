@@ -41,7 +41,7 @@ export class PhotonSpectrumCloudApi implements ICredentialType {
 			default: '',
 			placeholder: 'Paste your secret key here',
 			description:
-				'Your Spectrum secret key from the dashboard (Settings). Same value as “Secret Key” in app.photon.codes.',
+				'Your Spectrum secret key from the dashboard (Settings). Same value as "Secret Key" in app.photon.codes.',
 			required: true,
 		},
 		{

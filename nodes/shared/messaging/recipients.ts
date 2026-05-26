@@ -14,7 +14,7 @@ export function isE164Phone(address: string): boolean {
 function formatAddress(address: string): string {
 	const trimmed = address.trim();
 	if (trimmed.length <= 48) return trimmed;
-	return `${trimmed.slice(0, 45)}…`;
+	return `${trimmed.slice(0, 45)}...`;
 }
 
 export function assertPhoneRecipient(address: string, fieldLabel: string): void {
@@ -24,7 +24,7 @@ export function assertPhoneRecipient(address: string, fieldLabel: string): void 
 	}
 	if (looksLikeEmail(trimmed)) {
 		throw new ApplicationError(
-			`${fieldLabel} "${formatAddress(trimmed)}" is an email address. Apple ID email is not supported — use a phone number in E.164 format (e.g. +15551234567).`,
+			`${fieldLabel} "${formatAddress(trimmed)}" is an email address. Apple ID email is not supported - use a phone number in E.164 format (e.g. +15551234567).`,
 		);
 	}
 	if (!isE164Phone(trimmed)) {

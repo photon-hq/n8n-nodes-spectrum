@@ -9,7 +9,7 @@ export function resolveEffect(
 	const value = imessageNamespace.effect.message[effect];
 	if (value === undefined) {
 		logger?.warn(
-			`[Spectrum by Photon] Unknown effect "${effect}" — not found in spectrum-ts imessage.effect.message.`,
+			`[Spectrum by Photon] Unknown effect "${effect}" - not found in spectrum-ts imessage.effect.message.`,
 		);
 		return undefined;
 	}
