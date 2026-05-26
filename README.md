@@ -2,31 +2,23 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). **Listen to inbound text** and **send on iMessage** from n8n workflows. Channel setup happens in the [Spectrum dashboard](https://app.photon.codes).
+n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). Listen to inbound text messages and send on iMessage from n8n workflows. Configure lines and channels in the [Spectrum dashboard](https://app.photon.codes).
 
-## What you get
+## Nodes
 
 | Node | What it does |
 |------|----------------|
-| **Spectrum Trigger** | Starts a workflow when an inbound **text message** is received (default name: **On Spectrum Message**) |
-| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React to a message**, **Typing indicator**, **Send voice note**, **Send rich link**, **Edit message**, **Create poll**, **Share contact card**, **Set chat background** |
+| **On Spectrum Message** | Starts a workflow when an inbound text message is received |
+| **Spectrum** | Send messages, attachments, replies, reactions, typing indicators, voice notes, rich links, polls, and more |
 
-## Getting started
+## Install
 
-1. Set up your project at [app.photon.codes](https://app.photon.codes) and copy **Project ID** + **API Key**
-2. Install this package and add **Photon Spectrum Cloud API** credentials in n8n
-3. Add **Spectrum Trigger** -> **Spectrum** -> **Reply in thread**, then activate the workflow
-
-Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) for a starter template.
-
-## Install in n8n
-
-**n8n Cloud or self-hosted (recommended):**
+**n8n Cloud or self-hosted:**
 
 1. Open **Settings → Community Nodes**
-2. Select **Install a community node**
+2. Choose **Install a community node**
 3. Enter `n8n-nodes-spectrum` and confirm
-4. Restart n8n if prompted, then search the node panel for **Spectrum** or **On Spectrum Message**
+4. Restart n8n if prompted, then search for **Spectrum** or **On Spectrum Message**
 
 **Self-hosted (manual):**
 
@@ -34,14 +26,22 @@ Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) 
 npm install n8n-nodes-spectrum
 ```
 
-Set `N8N_COMMUNITY_PACKAGES` or use the Community Nodes UI so n8n loads the package on startup.
+Ensure n8n loads community packages on startup (Community Nodes UI or `N8N_COMMUNITY_PACKAGES`).
 
-## Spectrum by Photon (action - iMessage outbound)
+## Quick start
+
+1. Create a project at [app.photon.codes](https://app.photon.codes) and copy **Project ID** and **API Key**
+2. Add **Photon Spectrum Cloud API** credentials in n8n
+3. Build **On Spectrum Message → Spectrum → Reply in thread** and activate the workflow
+
+Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) for a starter template.
+
+## Spectrum actions
 
 | Action | What it does |
 |--------|----------------|
 | **Send a message** | Plain text; enable Link Preview in node options for URL previews |
-| **Send an attachment** | Photo, PDF, or other file - from the previous step or a saved file |
+| **Send an attachment** | Photo, PDF, or other file from the previous step or a saved file |
 | **Reply in thread** | Threaded reply to an inbound message |
 | **React to a message** | iMessage tapback |
 | **Typing indicator** | Show or hide the typing indicator in a thread (Indicator: Start or Stop) |
@@ -51,44 +51,38 @@ Set `N8N_COMMUNITY_PACKAGES` or use the Community Nodes UI so n8n loads the pack
 | **Create poll** | Poll with title and sortable options |
 | **Share contact card** | Structured fields or vCard |
 | **Set chat background** | Set, upload, or clear the thread background |
-| **Show Expert Options** | Message effects and optional reply attachments |
 
-## Spectrum Trigger (inbound - text only)
+Enable **Show Expert Options** on the node for message effects and optional reply attachments.
 
-Spectrum webhooks deliver **inbound text only** today. Photos, files, polls, and reactions are not usable in n8n until Spectrum adds downloadable webhook payloads.
+## On Spectrum Message (trigger)
 
-**Output:** `$json.text`, `$json.sender`, `$json.phone` (space line - same as `space.phone` in spectrum-ts), `$json.messageId`, `$json.platform`, `$json.spaceId`
+Spectrum webhooks deliver inbound text messages. Attachments and other rich inbound types are coming soon.
 
-**Line routing:** Leave **Line → Auto** (default) for trigger → reply flows. Pick **Dedicated Line** for cold sends on a specific number.
+When a message arrives, the trigger outputs:
 
-**Outbound:** Spectrum action nodes require **E.164 phone numbers** (`+15551234567`). Apple ID email is not supported for send/reply yet - contact [daniel@photon.codes](mailto:daniel@photon.codes) if you need that.
+- `$json.text` - message body
+- `$json.sender` - who sent it
+- `$json.phone` - line that received the message (E.164)
+- `$json.messageId`, `$json.platform`, `$json.spaceId`
 
-**Filters:** line phoneNumber, sender, space ID, DM vs group
+**Line routing:** Leave **Line → Auto** for trigger-to-reply flows. Choose **Dedicated Line** to filter or send from a specific number.
+
+**Filters:** Line phone number, sender, space ID, DM vs group
+
+**Outbound numbers:** Use E.164 format (`+15551234567`). Apple ID email routing for outbound is coming soon - contact [daniel@photon.codes](mailto:daniel@photon.codes) if you need it early.
 
 ## Development
+
+For local work on this package:
 
 ```bash
 npm install
 npm run build
-npm run dev          # local: auto-starts ngrok + sets WEBHOOK_URL
-npm run dev:local    # local without tunnel (outbound action node only)
+npm run dev        # ngrok tunnel for webhook testing
+npm run dev:local  # no tunnel (outbound actions only)
 ```
 
-**Local trigger testing:** `npm run dev` starts ngrok automatically. Toggle the workflow **Active** or click **Test this trigger**, then text your dedicated line.
-
-Install ngrok if needed: `brew install ngrok` then `ngrok config add-authtoken <token>`.
-
-### `Unrecognized node type: CUSTOM.photonSpectrumTrigger`
-
-Older local dev sessions registered nodes as `CUSTOM.photonSpectrumTrigger`. Current dev and npm installs use `n8n-nodes-spectrum.photonSpectrumTrigger`.
-
-1. Run `npm run build` then `npm run dev` (or `npm run link:dev` if n8n is already running).
-2. In the workflow, replace node types:
-   - `CUSTOM.photonSpectrumTrigger` → `n8n-nodes-spectrum.photonSpectrumTrigger`
-   - `CUSTOM.photonSpectrum` → `n8n-nodes-spectrum.photonSpectrum`
-3. Or delete and re-add the **On Spectrum Message** / **Spectrum** nodes from the picker.
-
-On n8n Cloud or self-hosted production, install **n8n-nodes-spectrum** from Community Nodes (Settings → Community Nodes).
+Local trigger testing requires [ngrok](https://ngrok.com). With `npm run dev`, activate the workflow or use **Test this trigger**, then text your line.
 
 ## License
 

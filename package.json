@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-spectrum",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "n8n community node for Photon Spectrum - inbound text webhooks and iMessage send/reply/react/typing/group",
   "license": "MIT",
   "keywords": [

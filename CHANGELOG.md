@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.0.5
+
+- Production-ready README: remove dev-only CUSTOM node troubleshooting, tighten structure
+
 ## 1.0.4
 
 - Keep all Spectrum action descriptions in the README table only
