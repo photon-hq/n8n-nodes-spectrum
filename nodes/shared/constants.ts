@@ -11,8 +11,7 @@ export const OPERATION_LABELS: Record<string, string> = {
 	createPoll: 'Create Poll',
 	shareContact: 'Share Contact Card',
 	setBackground: 'Set Chat Background',
-	startTyping: 'Start Typing',
-	stopTyping: 'Stop Typing',
+	typingIndicator: 'Typing Indicator',
 };
 
 export const LEGACY_OPERATION_LABELS: Record<string, string> = {

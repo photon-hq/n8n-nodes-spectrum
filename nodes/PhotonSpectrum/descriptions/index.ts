@@ -86,14 +86,9 @@ const EXTENDED_OPERATIONS: INodeProperties['options'] = [
 		description: 'Set or clear the chat background image',
 	},
 	{
-		name: 'Start Typing',
-		value: 'startTyping',
-		description: 'Show the typing indicator in a thread',
-	},
-	{
-		name: 'Stop Typing',
-		value: 'stopTyping',
-		description: 'Hide the typing indicator in a thread',
+		name: 'Typing Indicator',
+		value: 'typingIndicator',
+		description: 'Start or stop the typing indicator in a thread',
 	},
 ];
 
@@ -102,8 +97,7 @@ const PRIMARY_PICKER_ACTIONS: Record<string, string> = {
 	sendAttachment: 'Send an attachment',
 	replyToMessage: 'Reply in thread',
 	reactToMessage: 'React to a message',
-	startTyping: 'Start typing',
-	stopTyping: 'Stop typing',
+	typingIndicator: 'Show typing indicator',
 };
 
 const STANDARD_OPERATIONS = [...(CORE_OPERATIONS ?? []), ...(EXTENDED_OPERATIONS ?? [])];
@@ -120,6 +114,7 @@ const ATTACHMENT_OPERATIONS = ['sendAttachment', 'sendVoice'];
 const OP_REPLY = ['replyToMessage', 'reply'];
 const OP_REACT = ['reactToMessage', 'react'];
 const OP_TARGET = ['replyToMessage', 'editMessage', 'reactToMessage', 'reply', 'react'];
+const OP_TYPING = ['typingIndicator', 'startTyping', 'stopTyping', 'typing', 'sendTyping'];
 const OP_RECIPIENT = [
 	'sendMessage',
 	'sendAttachment',
@@ -128,8 +123,7 @@ const OP_RECIPIENT = [
 	'createPoll',
 	'shareContact',
 	'setBackground',
-	'startTyping',
-	'stopTyping',
+	...OP_TYPING,
 	'send',
 ];
 
@@ -589,7 +583,7 @@ export const spectrumProperties: INodeProperties[] = [
 		type: 'string',
 		required: true,
 		default: '',
-		placeholder: 'e.g. 🔥 or any emoji',
+		placeholder: 'e.g. fire emoji or any emoji',
 		description: 'Emoji or text for the reaction',
 		displayOptions: {
 			show: {
@@ -597,6 +591,19 @@ export const spectrumProperties: INodeProperties[] = [
 				reaction: ['__custom__'],
 			},
 		},
+	},
+	{
+		displayName: 'Indicator',
+		name: 'typingAction',
+		type: 'options',
+		noDataExpression: true,
+		options: [
+			{ name: 'Start', value: 'start', description: 'Show the typing indicator' },
+			{ name: 'Stop', value: 'stop', description: 'Hide the typing indicator' },
+		],
+		default: 'start',
+		description: 'Whether to start or stop the typing indicator',
+		displayOptions: { show: { operation: OP_TYPING } },
 	},
 	{
 		displayName: 'Line',

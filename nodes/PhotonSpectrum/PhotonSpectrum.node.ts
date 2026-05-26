@@ -19,7 +19,8 @@ import { spectrumProperties } from './descriptions';
 import { executeOperation } from './operations/executeOperation';
 
 function buildSubtitleExpression(): string {
-	return `={{ ${JSON.stringify(SUBTITLE_BY_OPERATION)}[$parameter["operation"]] || $parameter["operation"] || 'Send Message' }}`;
+	const labels = JSON.stringify(SUBTITLE_BY_OPERATION);
+	return `={{ $parameter["operation"] === "typingIndicator" ? ($parameter["typingAction"] === "stop" ? "Stop Typing" : "Start Typing") : (${labels}[$parameter["operation"]] || $parameter["operation"] || "Send Message") }}`;
 }
 
 export class PhotonSpectrum implements INodeType {

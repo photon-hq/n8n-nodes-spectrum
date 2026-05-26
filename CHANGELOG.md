@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.0.3
+
+- Single Typing Indicator action with Start/Stop option instead of two separate actions
+
 ## 1.0.2
 
 - Align README typing indicator docs with other Spectrum actions

@@ -110,6 +110,7 @@ export function readMessagingOptions(
 		groupAttachmentSource: ctx.getNodeParameter('groupAttachmentSource', itemIndex, 'path') as
 			| 'path'
 			| 'binary',
+		typingAction: ctx.getNodeParameter('typingAction', itemIndex, 'start') as 'start' | 'stop',
 	};
 }
 
