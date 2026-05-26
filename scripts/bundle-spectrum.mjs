@@ -18,10 +18,6 @@ const entryPoints = [
 		out: join(dist, 'nodes', 'PhotonSpectrumTrigger', 'PhotonSpectrumTrigger.node.js'),
 	},
 	{
-		src: join(root, 'nodes', 'PhotonSpectrumTyping', 'PhotonSpectrumTyping.node.ts'),
-		out: join(dist, 'nodes', 'PhotonSpectrumTyping', 'PhotonSpectrumTyping.node.js'),
-	},
-	{
 		src: join(root, 'credentials', 'PhotonSpectrumCloudApi.credentials.ts'),
 		out: join(dist, 'credentials', 'PhotonSpectrumCloudApi.credentials.js'),
 	},

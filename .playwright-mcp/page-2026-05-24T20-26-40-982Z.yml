@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - img [ref=e5]
+      - generic [ref=e7]:
+        - heading "Welcome to Photon" [level=2] [ref=e8]
+        - paragraph [ref=e9]: Bring your agents to millions of lives
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: Email
+          - textbox "Email" [ref=e14]:
+            - /placeholder: you@example.com
+        - generic [ref=e15]:
+          - generic [ref=e17]: Password
+          - generic [ref=e18]:
+            - textbox "Password" [ref=e19]:
+              - /placeholder: ••••••••
+            - button "Show password" [ref=e20] [cursor=pointer]:
+              - generic [ref=e21]:
+                - img [ref=e23]
+                - generic:
+                  - img
+        - button "Login" [ref=e26] [cursor=pointer]
+      - generic [ref=e31]: or
+      - button "Continue with Google" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - text: Continue with Google
+        - img [ref=e38]
+      - paragraph [ref=e43]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e44] [cursor=pointer]:
+          - /url: /sign-up
+    - paragraph [ref=e46]:
+      - link "Terms of Service" [ref=e47] [cursor=pointer]:
+        - /url: /terms-of-service
+      - text: and
+      - link "Privacy Policy" [ref=e48] [cursor=pointer]:
+        - /url: /privacy-policy
+  - region "Notifications alt+T"
+  - alert [ref=e49]

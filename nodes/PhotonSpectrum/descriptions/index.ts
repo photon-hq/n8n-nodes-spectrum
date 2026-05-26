@@ -85,6 +85,16 @@ const EXTENDED_OPERATIONS: INodeProperties['options'] = [
 		value: 'setBackground',
 		description: 'Set or clear the chat background image',
 	},
+	{
+		name: 'Start Typing',
+		value: 'startTyping',
+		description: 'Show the typing indicator in a thread',
+	},
+	{
+		name: 'Stop Typing',
+		value: 'stopTyping',
+		description: 'Hide the typing indicator in a thread',
+	},
 ];
 
 const PRIMARY_PICKER_ACTIONS: Record<string, string> = {
@@ -92,6 +102,8 @@ const PRIMARY_PICKER_ACTIONS: Record<string, string> = {
 	sendAttachment: 'Send an attachment',
 	replyToMessage: 'Reply in thread',
 	reactToMessage: 'React to a message',
+	startTyping: 'Start typing',
+	stopTyping: 'Stop typing',
 };
 
 const STANDARD_OPERATIONS = [...(CORE_OPERATIONS ?? []), ...(EXTENDED_OPERATIONS ?? [])];
@@ -116,6 +128,8 @@ const OP_RECIPIENT = [
 	'createPoll',
 	'shareContact',
 	'setBackground',
+	'startTyping',
+	'stopTyping',
 	'send',
 ];
 

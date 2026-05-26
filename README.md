@@ -9,8 +9,7 @@ n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). *
 | Node | What it does |
 |------|----------------|
 | **Spectrum Trigger** | Starts a workflow when an inbound **text message** is received (default name: **On Spectrum Message**) |
-| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React**, **Voice note**, **Poll**, **Contact card** |
-| **Spectrum Typing Indicator** | Start or stop the typing indicator in a thread |
+| **Spectrum** | **Send a message**, **Send an attachment**, **Reply in thread**, **React**, **Start typing**, **Stop typing**, **Voice note**, **Poll**, **Contact card** |
 
 ## Getting started
 
@@ -27,7 +26,7 @@ Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) 
 1. Open **Settings → Community Nodes**
 2. Select **Install a community node**
 3. Enter `n8n-nodes-spectrum` and confirm
-4. Restart n8n if prompted, then search the node panel for **Spectrum**, **On Spectrum Message**, or **Spectrum Typing Indicator**
+4. Restart n8n if prompted, then search the node panel for **Spectrum** or **On Spectrum Message**
 
 **Self-hosted (manual):**
 
@@ -51,9 +50,9 @@ Set `N8N_COMMUNITY_PACKAGES` or use the Community Nodes UI so n8n loads the pack
 | **Create poll** | Poll with title and sortable options |
 | **Share contact card** | Structured fields or vCard |
 | **Set chat background** | Set, upload, or clear the thread background |
+| **Start typing** | Show the typing indicator in a thread |
+| **Stop typing** | Hide the typing indicator in a thread |
 | **Show Expert Options** | Message effects and optional reply attachments |
-
-**Spectrum Typing Indicator** node: start or stop typing in a thread.
 
 **Link preview:** For text sends, enable **Link Preview** in Options - this turns on iMessage `enableLinkPreview` for URLs in the message (same path as [spectrum-ts rich links](https://photon.codes/docs/spectrum-ts/content#rich-links)).
 

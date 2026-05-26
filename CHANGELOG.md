@@ -2,11 +2,9 @@
 
 ## Unreleased
 
-- Per-phone routing: trigger exposes `$json.phone` (space line); action node maps to `im.space(user, { phone })`
-- Outbound actions: Send, Reply, React, Show Typing, Group (create chat + send album)
-- Send UX: text/file/poll/contact formats; link preview toggle (enableLinkPreview); voice note as file option
-- iMessage-only scope: remove Slack from trigger filters, docs, and non-iMessage webhook delivery
-- Reject Apple ID email for outbound; require E.164 phone numbers with clear errors
+## 1.0.1
+
+- Move Start Typing and Stop Typing into the main Spectrum action node; remove separate Typing Indicator node
 
 ## 1.0.0
 

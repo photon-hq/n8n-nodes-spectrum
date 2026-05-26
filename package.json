@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-spectrum",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "n8n community node for Photon Spectrum - inbound text webhooks and iMessage send/reply/react/typing/group",
   "license": "MIT",
   "keywords": [
@@ -54,8 +54,7 @@
     ],
     "nodes": [
       "dist/nodes/PhotonSpectrum/PhotonSpectrum.node.js",
-      "dist/nodes/PhotonSpectrumTrigger/PhotonSpectrumTrigger.node.js",
-      "dist/nodes/PhotonSpectrumTyping/PhotonSpectrumTyping.node.js"
+      "dist/nodes/PhotonSpectrumTrigger/PhotonSpectrumTrigger.node.js"
     ]
   },
   "devDependencies": {

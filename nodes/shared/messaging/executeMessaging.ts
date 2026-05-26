@@ -48,7 +48,7 @@ function resolveOperation(ctx: IExecuteFunctions, itemIndex: number): SpectrumOp
 	if (operation === 'reactToMessage' || operation === 'react') {
 		return 'reactToMessage';
 	}
-	if (operation === 'sendTyping' || operation === 'typing') {
+	if (operation === 'sendTyping' || operation === 'typing' || operation === 'startTyping' || operation === 'stopTyping') {
 		return 'sendTyping';
 	}
 	if (operation === 'createPoll') {
@@ -145,7 +145,13 @@ export async function executeMessagingOperation(
 	}
 
 	if (operation === 'sendTyping') {
-		return executeImessageOperation(ctx, session, operation, itemIndex, options);
+		const rawOperation = ctx.getNodeParameter('operation', itemIndex) as string;
+		const typingAction =
+			rawOperation === 'stopTyping' ? 'stop' : rawOperation === 'startTyping' ? 'start' : options.typingAction ?? 'start';
+		return executeImessageOperation(ctx, session, operation, itemIndex, {
+			...options,
+			typingAction,
+		});
 	}
 
 	throw new NodeOperationError(ctx.getNode(), `Unknown operation "${operation}"`, { itemIndex });
