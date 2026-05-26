@@ -20,6 +20,23 @@ n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). *
 
 Import [workflows/trigger-on-messages.json](workflows/trigger-on-messages.json) for a starter template.
 
+## Install in n8n
+
+**n8n Cloud or self-hosted (recommended):**
+
+1. Open **Settings → Community Nodes**
+2. Select **Install a community node**
+3. Enter `n8n-nodes-spectrum` and confirm
+4. Restart n8n if prompted, then search the node panel for **Spectrum**, **On Spectrum Message**, or **Spectrum Typing Indicator**
+
+**Self-hosted (manual):**
+
+```bash
+npm install n8n-nodes-spectrum
+```
+
+Set `N8N_COMMUNITY_PACKAGES` or use the Community Nodes UI so n8n loads the package on startup.
+
 ## Spectrum by Photon (action - iMessage outbound)
 
 | Action | What it does |
