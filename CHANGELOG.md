@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.0.4
+
+- Keep all Spectrum action descriptions in the README table only
+
 ## 1.0.3
 
 - Single Typing Indicator action with Start/Stop option instead of two separate actions

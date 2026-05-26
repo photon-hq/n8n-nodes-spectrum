@@ -40,22 +40,18 @@ Set `N8N_COMMUNITY_PACKAGES` or use the Community Nodes UI so n8n loads the pack
 
 | Action | What it does |
 |--------|----------------|
-| **Send a message** | Plain text with optional link preview |
+| **Send a message** | Plain text; enable Link Preview in node options for URL previews |
 | **Send an attachment** | Photo, PDF, or other file - from the previous step or a saved file |
 | **Reply in thread** | Threaded reply to an inbound message |
 | **React to a message** | iMessage tapback |
-| **Typing indicator** | Start or stop the typing indicator (Indicator: Start / Stop) |
+| **Typing indicator** | Show or hide the typing indicator in a thread (Indicator: Start or Stop) |
 | **Send voice note** | Audio clip as a voice note (file path or binary) |
-| **Send rich link** | URL as an iMessage rich link card |
+| **Send rich link** | Send a URL as an iMessage rich link card |
 | **Edit message** | Replace text on a message you sent |
 | **Create poll** | Poll with title and sortable options |
 | **Share contact card** | Structured fields or vCard |
 | **Set chat background** | Set, upload, or clear the thread background |
 | **Show Expert Options** | Message effects and optional reply attachments |
-
-**Typing indicator** uses the same **Recipients** and **Line** fields as Send Message. Set **Indicator** to Start before a send step, then Stop when you are done (or let the send clear it).
-
-**Link preview:** For text sends, enable **Link Preview** in Options - this turns on iMessage `enableLinkPreview` for URLs in the message (same path as [spectrum-ts rich links](https://photon.codes/docs/spectrum-ts/content#rich-links)).
 
 ## Spectrum Trigger (inbound - text only)
 
