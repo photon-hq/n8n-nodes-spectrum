@@ -1,6 +1,6 @@
 # n8n-nodes-spectrum
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 n8n community node for [Photon Spectrum Cloud](https://photon.codes/spectrum). Listen to inbound text messages and send on iMessage from n8n workflows. Configure lines and channels in the [Spectrum dashboard](https://app.photon.codes).
 
@@ -86,4 +86,4 @@ Local trigger testing requires [ngrok](https://ngrok.com). With `npm run dev`, a
 
 ## License
 
-[MIT](LICENSE)
+[Apache-2.0](LICENSE)
